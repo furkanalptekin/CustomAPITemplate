@@ -14,6 +14,7 @@ public partial class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
         _configuration = configuration;
     }
 
+    public virtual DbSet<RefreshToken> RefreshToken { get; set; }
     public virtual DbSet<Example> Example { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

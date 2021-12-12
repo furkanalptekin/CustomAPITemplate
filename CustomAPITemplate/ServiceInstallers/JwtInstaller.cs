@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using CustomAPITemplate.Core.Configuration;
+using CustomAPITemplate.Helpers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -22,15 +23,7 @@ public class JwtInstaller : IServiceInstaller
             .AddJwtBearer(options =>
             {
                 options.SaveToken = true;
-                options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtSettings.Secret)),
-                    ValidateIssuer = false,
-                    ValidateAudience = false,
-                    RequireExpirationTime = false,
-                    ValidateLifetime = true
-                };
+                options.TokenValidationParameters = TokenValidationParametersHelper.GetTokenValidationParameters(jwtSettings);
             });
     }
 }

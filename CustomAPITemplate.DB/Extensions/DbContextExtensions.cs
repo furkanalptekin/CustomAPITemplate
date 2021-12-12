@@ -21,9 +21,6 @@ public static class DbContextExtensions
             return response;
         }
 
-        entity.CreationTime = DateTime.UtcNow;
-        entity.IsActive = true;
-
         await context.AddAsync(entity, token).ConfigureAwait(false);
 
         var changes = await context.SaveChangesAsync(token).ConfigureAwait(false);
@@ -80,7 +77,6 @@ public static class DbContextExtensions
 
             property.SetValue(dbEntity, property.GetValue(entity, null), null);
         }
-        dbEntity.UpdateTime = DateTime.UtcNow;
         context.Entry(dbEntity).State = EntityState.Modified;
 
         var changes = await context.SaveChangesAsync(token).ConfigureAwait(false);
@@ -134,7 +130,7 @@ public static class DbContextExtensions
 
         response.Results.Add(new()
         {
-            Message = "Successfully deleted the entity!",
+            Message = "Successfully deleted",
             Severity = Severity.Info
         });
 

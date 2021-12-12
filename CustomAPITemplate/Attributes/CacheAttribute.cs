@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using System.Text;
 using CustomAPITemplate.Core.Configuration;
+using CustomAPITemplate.Core.Extensions;
 using CustomAPITemplate.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -53,7 +54,7 @@ public class CacheAttribute : Attribute, IAsyncActionFilter
     private static string GenerateCacheKeyFromRequest(ActionExecutingContext context)
     {
         var request = context.HttpContext.Request;
-        var stringBuilder = new StringBuilder($"{request.Method}|{request.Path}");
+        var stringBuilder = new StringBuilder($"{request.Method}|{request.Path.Value?.ToLowerEN() ?? string.Empty}");
 
         if (request.Method == "GET")
         {

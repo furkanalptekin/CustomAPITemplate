@@ -7,6 +7,5 @@ public class AppUser : IdentityUser<Guid>
     public string FirstName { get; set; }
     public string LastName { get; set; }
     public string FullName => $"{FirstName} {LastName}";
-    public string ImagePath { get; set; }
     public bool IsBanned { get; set; }
 }

@@ -8,11 +8,7 @@ public class AutoMapperProfiles : Profile
 {
     public AutoMapperProfiles()
     {
-        CreateMap<AppUser, AppUserResponse>()
-            .ForMember(dest => dest.ImagePath,
-                opt => opt.MapFrom(src => src.ImagePath ?? @"Files/defaultAvatar.png"));
-
-        CreateMap<AppUserResponse, AppUser>();
+        CreateMap<AppUser, AppUserResponse>().ReverseMap();
 
         CreateMap<EntityBase, ResponseBase>()
             .IncludeAllDerived();

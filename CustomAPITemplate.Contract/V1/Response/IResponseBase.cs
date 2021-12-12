@@ -7,7 +7,6 @@ public interface IResponseBase
     public Guid CreatorUserId { get; set; }
     public DateTime? UpdateTime { get; set; }
     public Guid? UpdateUserId { get; set; }
-    public string UpdateHostIP { get; set; }
     public bool IsActive { get; set; }
 
     public AppUserResponse CreatorUser { get; set; }

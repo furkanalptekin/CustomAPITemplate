@@ -1,6 +1,6 @@
 ﻿using CustomAPITemplate.Core.Configuration;
+using CustomAPITemplate.Core.Extensions;
 using CustomAPITemplate.Services;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace CustomAPITemplate.Attributes;
@@ -32,7 +32,7 @@ public class ClearCache : Attribute, IAsyncActionFilter
         var cacheService = context.HttpContext.RequestServices.GetRequiredService<IResponseCacheService>();
 
         var routeValues = context.RouteData.Values;
-        var controllerName = routeValues.ContainsKey("controller") ? routeValues["controller"].ToString() : null;
+        var controllerName = routeValues.ContainsKey("controller") ? routeValues["controller"].ToString()?.ToLowerEN() : null;
 
         if (string.IsNullOrEmpty(controllerName))
         {

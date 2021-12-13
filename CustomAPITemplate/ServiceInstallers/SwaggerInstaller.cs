@@ -1,4 +1,6 @@
-﻿using Microsoft.OpenApi.Models;
+﻿using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Swagger;
 
 namespace CustomAPITemplate.ServiceInstallers;
 
@@ -30,5 +32,7 @@ public class SwaggerInstaller : IServiceInstaller
                 }
             });
         });
+
+        services.AddFluentValidationRulesToSwagger();
     }
 }

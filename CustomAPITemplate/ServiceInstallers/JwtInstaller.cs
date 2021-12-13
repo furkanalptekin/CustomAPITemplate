@@ -25,5 +25,7 @@ public class JwtInstaller : IServiceInstaller
                 options.SaveToken = true;
                 options.TokenValidationParameters = TokenValidationParametersHelper.GetTokenValidationParameters(jwtSettings);
             });
+
+        services.AddAuthorization();
     }
 }

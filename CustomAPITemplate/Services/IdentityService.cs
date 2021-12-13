@@ -142,10 +142,10 @@ public class IdentityService : IIdentityService
         var jti = principal.FindFirstValue(JwtRegisteredClaimNames.Jti);
         var storedRefreshToken = await _dbContext.RefreshToken.SingleOrDefaultAsync(x => x.Token == request.RefreshToken);
 
-        if (storedRefreshToken == null 
-            || DateTime.UtcNow > storedRefreshToken.ExpiryDate 
-            || storedRefreshToken.Used 
-            || storedRefreshToken.Invalidated 
+        if (storedRefreshToken == null
+            || DateTime.UtcNow > storedRefreshToken.ExpiryDate
+            || storedRefreshToken.Used
+            || storedRefreshToken.Invalidated
             || storedRefreshToken.JwtId != jti)
         {
             response.Results.Add(new()
@@ -181,15 +181,23 @@ public class IdentityService : IIdentityService
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_jwtSettings.Secret);
 
+        var claims = new List<Claim>
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, user.Email),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim("id", user.Id.ToString())
+        };
+
+        var userRoles = await _userManager.GetRolesAsync(user);
+        foreach (var role in userRoles ?? Enumerable.Empty<string>())
+        {
+            claims.Add(new(ClaimTypes.Role, role));
+        }
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim("id", user.Id.ToString())
-            }),
+            Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.Add(_jwtSettings.TokenLifetime),
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
@@ -237,7 +245,7 @@ public class IdentityService : IIdentityService
 
     private bool IsJwtValidSecurityAlgorithm(SecurityToken securityToken)
     {
-        return (securityToken is JwtSecurityToken jwtSecurityToken) 
+        return (securityToken is JwtSecurityToken jwtSecurityToken)
             && jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase);
     }
 

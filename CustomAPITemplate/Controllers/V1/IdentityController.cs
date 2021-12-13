@@ -1,4 +1,5 @@
 ﻿using CustomAPITemplate.Contract.V1;
+using CustomAPITemplate.Core.Constants;
 using CustomAPITemplate.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -63,7 +64,7 @@ public class IdentityController : ControllerBase
 
     [HttpPost]
     [Route("ban")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = MinAllowedRole.ADMIN)]
     public async Task<IActionResult> BanUser(Guid userId)
     {
         var response = await _identityService.BanUserAsync(userId);

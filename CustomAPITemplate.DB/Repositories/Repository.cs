@@ -6,7 +6,7 @@ using CustomAPITemplate.DB.Repositories.Interfaces;
 
 namespace CustomAPITemplate.DB.Repositories;
 
-public class Repository<TEntity> : IRepository<TEntity> where TEntity : EntityBase
+public class Repository<TKey, TEntity> : IRepository<TKey, TEntity> where TEntity : EntityBase<TKey>
 {
     protected readonly AppDbContext _context;
     public Repository(AppDbContext context)
@@ -14,33 +14,33 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : EntityBa
         _context = context;
     }
 
-    public async Task<Response<TEntity>> CreateAsync(TEntity entity, CancellationToken token)
+    public virtual async Task<Response<TEntity>> CreateAsync(TEntity entity, CancellationToken token)
     {
-        return await _context.AddEntityAsync(entity, token).ConfigureAwait(false);
+        return await _context.AddEntityAsync<TKey, TEntity>(entity, token).ConfigureAwait(false);
     }
 
-    public async Task<Response<int>> DeleteAsync(Guid id, CancellationToken token)
+    public virtual async Task<Response<int>> DeleteAsync(TKey id, CancellationToken token)
     {
-        return await _context.RemoveEntityAsync<TEntity>(id, token).ConfigureAwait(false);
+        return await _context.RemoveEntityAsync<TKey, TEntity>(id, token).ConfigureAwait(false);
     }
 
-    public async Task<Response<IEnumerable<TEntity>>> GetAsync(CancellationToken token)
+    public virtual async Task<Response<IEnumerable<TEntity>>> GetAsync(CancellationToken token)
     {
-        return await _context.WhereAsync<TEntity>((entity) => entity.IsActive, token).ConfigureAwait(false);
+        return await _context.WhereAsync<TKey, TEntity>((entity) => entity.IsActive, token).ConfigureAwait(false);
     }
 
-    public async Task<Response<TEntity>> GetAsync(Guid id, CancellationToken token)
+    public virtual async Task<Response<TEntity>> GetAsync(TKey id, CancellationToken token)
     {
-        return await _context.FindEntityAsync<TEntity>(id, token).ConfigureAwait(false);
+        return await _context.FindEntityAsync<TKey, TEntity>(id, token).ConfigureAwait(false);
     }
 
-    public async Task<Response<int>> UpdateAsync(Guid id, TEntity entity, string[] propertiesToIgnore, CancellationToken token)
+    public virtual async Task<Response<int>> UpdateAsync(TKey id, TEntity entity, string[] propertiesToIgnore, CancellationToken token)
     {
         return await _context.UpdateEntityAsync(id, entity, token, propertiesToIgnore ?? Core.Constants.PropertiesToIgnore.DEFAULT).ConfigureAwait(false);
     }
 
-    public async Task<Response<IEnumerable<TEntity>>> WhereAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken token, params object[] includes)
+    public virtual async Task<Response<IEnumerable<TEntity>>> WhereAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken token, params string[] includes)
     {
-        return await _context.WhereAsync<TEntity>(predicate, token, includes).ConfigureAwait(false);
+        return await _context.WhereAsync<TKey, TEntity>(predicate, token, includes).ConfigureAwait(false);
     }
 }

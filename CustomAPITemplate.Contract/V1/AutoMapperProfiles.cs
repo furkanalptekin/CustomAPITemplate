@@ -10,13 +10,11 @@ public class AutoMapperProfiles : Profile
     {
         CreateMap<AppUser, AppUserResponse>().ReverseMap();
 
-        CreateMap<EntityBase, ResponseBase>()
+        CreateMap(typeof(EntityBase<>), typeof(AuditResponseBase<>))
             .IncludeAllDerived();
 
-        //CreateMap<FileEntityBase, FileEntityBaseDto>()
-        //    .IncludeAllDerived();
-
-        CreateMap<Example, ExampleResponse>().ReverseMap();
+        CreateMap<Example, ExampleResponse>();
+        
         CreateMap<Example, ExampleRequest>().ReverseMap();
     }
 }

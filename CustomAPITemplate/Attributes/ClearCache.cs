@@ -6,10 +6,10 @@ using Microsoft.AspNetCore.Mvc.Filters;
 namespace CustomAPITemplate.Attributes;
 
 [AttributeUsage(AttributeTargets.Method)]
-public class ClearCache : Attribute, IAsyncActionFilter
+public class ClearCacheAttribute : Attribute, IAsyncActionFilter
 {
-    private Type _objectResult;
-    public ClearCache(Type objectResult)
+    private readonly Type _objectResult;
+    public ClearCacheAttribute(Type objectResult)
     {
         _objectResult = objectResult;
     }

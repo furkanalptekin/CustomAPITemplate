@@ -1,5 +1,5 @@
-﻿using CustomAPITemplate.Contract.V1;
-using CustomAPITemplate.Filters;
+﻿using CustomAPITemplate.Attributes;
+using CustomAPITemplate.Contract.V1;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Mvc;
 

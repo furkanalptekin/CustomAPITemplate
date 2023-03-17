@@ -19,4 +19,9 @@ public static class JsonExtensions
     {
         return JsonConvert.SerializeObject(response, _settings);
     }
+
+    public static string ToJson(this object response)
+    {
+        return JsonConvert.SerializeObject(response, _settings);
+    }
 }

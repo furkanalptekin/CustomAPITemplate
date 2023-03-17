@@ -1,6 +1,8 @@
-﻿namespace CustomAPITemplate.Contract.V1;
+﻿using CustomAPITemplate.Contract.V1.Response;
 
-public class RegistrationResponse
+namespace CustomAPITemplate.Contract.V1;
+
+public class RegistrationResponse : IResponseBase
 {
 
 }

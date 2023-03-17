@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using System.Linq;
+using System.Linq.Expressions;
 using CustomAPITemplate.Core;
 using CustomAPITemplate.Core.Extensions;
 using CustomAPITemplate.DB.Entity;
@@ -8,7 +9,7 @@ namespace CustomAPITemplate.DB.Extensions;
 
 public static class DbContextExtensions
 {
-    public static async Task<Response<TEntity>> AddEntityAsync<TEntity>(this DbContext context, TEntity entity, CancellationToken token) where TEntity : EntityBase
+    public static async Task<Response<TEntity>> AddEntityAsync<TKey, TEntity>(this DbContext context, TEntity entity, CancellationToken token) where TEntity : EntityBase<TKey>
     {
         var response = new Response<TEntity>();
         if (entity == null)
@@ -44,7 +45,7 @@ public static class DbContextExtensions
         return response;
     }
 
-    public static async Task<Response<int>> UpdateEntityAsync<TEntity>(this DbContext context, Guid id, TEntity entity, CancellationToken token, params string[] propertiesToIgnore) where TEntity : EntityBase
+    public static async Task<Response<int>> UpdateEntityAsync<TKey, TEntity>(this DbContext context, TKey id, TEntity entity, CancellationToken token, params string[] propertiesToIgnore) where TEntity : EntityBase<TKey>
     {
         var response = new Response<int>();
         if (entity == null)
@@ -100,10 +101,10 @@ public static class DbContextExtensions
         return response;
     }
 
-    public static async Task<Response<int>> RemoveEntityAsync<TEntity>(this DbContext context, Guid Id, CancellationToken token) where TEntity : EntityBase
+    public static async Task<Response<int>> RemoveEntityAsync<TKey, TEntity>(this DbContext context, TKey id, CancellationToken token) where TEntity : EntityBase<TKey>
     {
         var response = new Response<int>();
-        var dbEntity = await context.Set<TEntity>().FindAsync(new object[] { Id }, cancellationToken: token).ConfigureAwait(false);
+        var dbEntity = await context.Set<TEntity>().FindAsync(new object[] { id }, cancellationToken: token).ConfigureAwait(false);
         if (dbEntity == null)
         {
             response.Results.Add(new()
@@ -138,13 +139,12 @@ public static class DbContextExtensions
         return response;
     }
 
-    public static async Task<Response<TEntity>> FindEntityAsync<TEntity>(this DbContext context, Guid Id, CancellationToken token) where TEntity : EntityBase
+    public static async Task<Response<TEntity>> FindEntityAsync<TKey, TEntity>(this DbContext context, TKey id, CancellationToken token) where TEntity : EntityBase<TKey>
     {
         var response = new Response<TEntity>();
         var dbEntity = await context.Set<TEntity>()
-            .Where(x => x.Id == Id)
-            .Include(x => x.CreatorUser)
-            .Include(x => x.UpdateUser)
+            .Where(x => x.Id.Equals(id))
+            .IncludeUsersIfAuditEntity<TKey, TEntity>()
             .FirstOrDefaultAsync(token)
             .ConfigureAwait(false);
 
@@ -162,22 +162,26 @@ public static class DbContextExtensions
         return response;
     }
 
-    public static async Task<Response<IEnumerable<TEntity>>> WhereAsync<TEntity>(this DbContext context, Expression<Func<TEntity, bool>> predicate, CancellationToken token, params object[] includes) where TEntity : EntityBase
+    public static async Task<Response<IEnumerable<TEntity>>> WhereAsync<TKey, TEntity>(this DbContext context, Expression<Func<TEntity, bool>> predicate, CancellationToken token, params string[] includes) where TEntity : EntityBase<TKey>
     {
         var response = new Response<IEnumerable<TEntity>>();
-        var entities = await context.Set<TEntity>()
+        var query = context.Set<TEntity>()
             .Where(predicate)
-            .Include(x => x.CreatorUser)
-            .Include(x => x.UpdateUser)
-            .ToListAsync(token)
-            .ConfigureAwait(false);
+            .IncludeUsersIfAuditEntity<TKey, TEntity>();
+
+        foreach (var item in includes ?? Array.Empty<string>())
+        {
+            query = query.Include(item);
+        }
+
+        var entities = await query.ToListAsync().ConfigureAwait(false);
 
         if (entities == null || entities.Count == 0)
         {
             response.Value = Enumerable.Empty<TEntity>();
             response.Results.Add(new()
             {
-                Message = "No entity is found!",
+                Message = "Entity not found",
                 Severity = Severity.Info
             });
             return response;
@@ -187,43 +191,7 @@ public static class DbContextExtensions
         return response;
     }
 
-    //TODO: Async
-    public static Response<IEnumerable<TEntity>> FilterEntity<TEntity>(this DbContext context, Predicate<TEntity> predicate, CancellationToken token, IEnumerable<string> includes = null) where TEntity : EntityBase
-    {
-        var response = new Response<IEnumerable<TEntity>>();
-        var query = context.Set<TEntity>()
-            .Include(x => x.CreatorUser)
-            .Include(x => x.UpdateUser)
-            .AsQueryable();
-
-        foreach (var item in includes ?? Enumerable.Empty<string>())
-        {
-            query = query.Include(item);
-        }
-
-        //TODO: custom filtering
-        var entities = query
-            .AsEnumerable()
-            .Where(x => ActivePredicate(x).Invoke(x) && (UserFilterPredicate(x, string.Empty).Invoke(x) || predicate.Invoke(x)))
-            //.Skip(model.Start)
-            //.Take(model.Length)
-            .ToList();
-
-        if (entities == null || entities.Count() == 0)
-        {
-            response.Value = new List<TEntity>();
-            response.Results.Add(new()
-            {
-                Message = "Entity not found",
-                Severity = Severity.Error
-            });
-            return response;
-        }
-        response.Value = entities;
-        return response;
-    }
-
-    private static Predicate<TEntity> UserFilterPredicate<TEntity>(TEntity entity, string searchValue) where TEntity : EntityBase
+    private static Predicate<TEntity> UserFilterPredicate<TKey, TEntity>(TEntity entity, string searchValue) where TEntity : AuditEntityBase<TKey>
     {
         Predicate<TEntity> creatorUserPredicate = (x) =>
         {
@@ -243,7 +211,7 @@ public static class DbContextExtensions
         return creatorUserPredicate;
     }
 
-    private static Predicate<TEntity> ActivePredicate<TEntity>(TEntity entity) where TEntity : EntityBase
+    private static Predicate<TEntity> ActivePredicate<TKey, TEntity>() where TEntity : EntityBase<TKey>
     {
         Predicate<TEntity> isActivePredicate = (x) =>
         {
@@ -251,5 +219,17 @@ public static class DbContextExtensions
         };
 
         return isActivePredicate;
+    }
+
+    private static IQueryable<TEntity> IncludeUsersIfAuditEntity<TKey, TEntity>(this IQueryable<TEntity> queryable) where TEntity : EntityBase<TKey>
+    {
+        if (typeof(TEntity).IsAssignableTo(typeof(IAuditEntityBase<TKey>)))
+        {
+            return queryable
+                .Include("CreatorUser")
+                .Include("UpdateUser");
+        }
+
+        return queryable;
     }
 }

@@ -2,7 +2,7 @@
 
 namespace CustomAPITemplate.DB.Repositories.Interfaces;
 
-public interface IExampleRepository : IRepository<Example>
+public interface IExampleRepository : IRepository<int, Example>
 {
 
 }

@@ -6,8 +6,8 @@ namespace CustomAPITemplate.Extensions;
 
 public static class EntityBaseExtensions
 {
-    public static Response InjectData<TEntity>(this TEntity entity, ControllerBase controller, bool isCreation = true) 
-        where TEntity: IEntityBase
+    public static Response InjectData<TKey, TEntity>(this TEntity entity, ControllerBase controller, bool isCreation = true) 
+        where TEntity: IEntityBase<TKey>
     {
         var response = new Response();
         if (entity == null)
@@ -19,6 +19,13 @@ public static class EntityBaseExtensions
             });
             return response;
         }
+
+        if (!typeof(TEntity).IsAssignableTo(typeof(IAuditEntityBase<TKey>)))
+        {
+            return response;
+        }
+
+        var auditEntity = entity as IAuditEntityBase<TKey>;
 
         var userIdClaim = controller.HttpContext.GetUserId();
         if (string.IsNullOrWhiteSpace(userIdClaim))
@@ -45,17 +52,17 @@ public static class EntityBaseExtensions
 
         if (isCreation)
         {
-            entity.CreationTime = DateTime.UtcNow;
-            entity.CreatorUserId = userId;
-            entity.HostIP = ipAdress;
-            entity.IsActive = true;
+            auditEntity.CreationTime = DateTime.UtcNow;
+            auditEntity.CreatorUserId = userId;
+            auditEntity.HostIP = ipAdress;
+            auditEntity.IsActive = true;
 
             return response;
         }
 
-        entity.UpdateTime = DateTime.UtcNow;
-        entity.UpdateHostIP = ipAdress;
-        entity.UpdateUserId = userId;
+        auditEntity.UpdateTime = DateTime.UtcNow;
+        auditEntity.UpdateHostIP = ipAdress;
+        auditEntity.UpdateUserId = userId;
 
         return response;
     }

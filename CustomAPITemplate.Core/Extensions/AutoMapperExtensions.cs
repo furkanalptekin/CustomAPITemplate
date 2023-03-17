@@ -11,11 +11,10 @@ public static class AutoMapperExtensions
         if (response.Value != null)
         {
             var mappedValue = mapper.Map<TDestination>(response.Value);
-
-            tempResponse.Results.AddRange(response.Results);
             tempResponse.Value = mappedValue;
         }
 
+        tempResponse.Results.AddRange(response.Results);
         return tempResponse;
     }
 }

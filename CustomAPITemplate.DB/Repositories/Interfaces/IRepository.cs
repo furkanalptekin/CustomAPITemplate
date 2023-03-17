@@ -4,12 +4,12 @@ using CustomAPITemplate.DB.Entity;
 
 namespace CustomAPITemplate.DB.Repositories.Interfaces;
 
-public interface IRepository<TEntity> where TEntity : IEntityBase
+public interface IRepository<TKey, TEntity> where TEntity : IEntityBase<TKey>
 {
-    public Task<Response<TEntity>> CreateAsync(TEntity entity, CancellationToken token);
-    public Task<Response<int>> DeleteAsync(Guid id, CancellationToken token);
-    public Task<Response<int>> UpdateAsync(Guid id, TEntity entity, string[] propertiesToIgnore, CancellationToken token);
-    public Task<Response<IEnumerable<TEntity>>> GetAsync(CancellationToken token);
-    public Task<Response<TEntity>> GetAsync(Guid id, CancellationToken token);
-    public Task<Response<IEnumerable<TEntity>>> WhereAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken token, params object[] includes);
+    Task<Response<TEntity>> CreateAsync(TEntity entity, CancellationToken token);
+    Task<Response<int>> DeleteAsync(TKey id, CancellationToken token);
+    Task<Response<int>> UpdateAsync(TKey id, TEntity entity, string[] propertiesToIgnore, CancellationToken token);
+    Task<Response<IEnumerable<TEntity>>> GetAsync(CancellationToken token);
+    Task<Response<TEntity>> GetAsync(TKey id, CancellationToken token);
+    Task<Response<IEnumerable<TEntity>>> WhereAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken token, params string[] includes);
 }

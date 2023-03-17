@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+﻿using CustomAPITemplate.Core.Extensions;
 using StackExchange.Redis;
 
 namespace CustomAPITemplate.Services;
@@ -42,7 +42,7 @@ public class ResponseCacheService : IResponseCacheService
             return;
         }
 
-        var serializedResponse = JsonConvert.SerializeObject(response);
+        var serializedResponse = response.ToJson();
 
         var db = _connectionMultiplexer.GetDatabase();
         await db.StringSetAsync(key, serializedResponse, ttl);

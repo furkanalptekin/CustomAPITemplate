@@ -9,12 +9,12 @@ namespace CustomAPITemplate.Controllers.V1;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-public class BasicV1Controller<TEntity, TEntityRequest, TEntityResponse, TRepository>
-    : BasicAPIController<TEntity, TEntityRequest, TEntityResponse, TRepository>
-        where TEntity : IEntityBase
+public class BasicV1Controller<TKey, TEntity, TEntityRequest, TEntityResponse, TRepository>
+    : BasicApiController<TKey, TEntity, TEntityRequest, TEntityResponse, TRepository>
+        where TEntity : IEntityBase<TKey>
         where TEntityRequest : IRequestBase
-        where TEntityResponse : IResponseBase
-        where TRepository : IRepository<TEntity>
+        where TEntityResponse : IAuditResponseBase<TKey>
+        where TRepository : IRepository<TKey, TEntity>
 {
     public BasicV1Controller(TRepository repository, IMapper mapper)
         : base(repository, mapper)

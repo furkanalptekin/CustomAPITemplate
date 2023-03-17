@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CustomAPITemplate.DB.Models;
 using CustomAPITemplate.DB.Repositories;
 using CustomAPITemplate.Extensions;
@@ -11,6 +12,7 @@ builder.InstallServices();
 
 var app = builder.Build();
 
+//TODO: delete
 using (var scope = app.Services.CreateScope())
 {
     scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
@@ -20,12 +22,17 @@ using (var scope = app.Services.CreateScope())
 
     await DefaultDbValues.CreateDefaultUsers(userManager, roleManager);
 }
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseMiddleware<ResponseTimeMiddleware>();
+
+app.UseResponseCompression();
 
 app.UseHttpsRedirection();
 

@@ -12,14 +12,15 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CustomAPITemplate.DB.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20211118170625_InitialMigration")]
+    [Migration("20230317203128_InitialMigration")]
     partial class InitialMigration
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.0")
+                .HasAnnotation("ProductVersion", "7.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -72,9 +73,6 @@ namespace CustomAPITemplate.DB.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("FirstName")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ImagePath")
                         .HasColumnType("text");
 
                     b.Property<bool>("IsBanned")
@@ -130,9 +128,11 @@ namespace CustomAPITemplate.DB.Migrations
 
             modelBuilder.Entity("CustomAPITemplate.DB.Models.Example", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("timestamp with time zone");
@@ -170,6 +170,37 @@ namespace CustomAPITemplate.DB.Migrations
                     b.HasIndex("UpdateUserId");
 
                     b.ToTable("Example");
+                });
+
+            modelBuilder.Entity("CustomAPITemplate.DB.Models.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Token")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Invalidated")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("JwtId")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Used")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Token");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshToken");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -288,6 +319,17 @@ namespace CustomAPITemplate.DB.Migrations
                     b.Navigation("CreatorUser");
 
                     b.Navigation("UpdateUser");
+                });
+
+            modelBuilder.Entity("CustomAPITemplate.DB.Models.RefreshToken", b =>
+                {
+                    b.HasOne("CustomAPITemplate.DB.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>

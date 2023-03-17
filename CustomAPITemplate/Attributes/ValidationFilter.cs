@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
-namespace CustomAPITemplate.Filters;
+namespace CustomAPITemplate.Attributes;
 
 public class ValidationFilter : IAsyncActionFilter
 {

@@ -1,6 +1,8 @@
-﻿namespace CustomAPITemplate.Contract.V1;
+﻿using CustomAPITemplate.Contract.V1.Response;
 
-public class LoginResponse
+namespace CustomAPITemplate.Contract.V1;
+
+public class LoginResponse : IResponseBase
 {
     public string Token { get; set; }
     public Guid RefreshToken { get; set; }

@@ -6,6 +6,11 @@ public class CompressionInstaller : IServiceInstaller
 {
     public void InstallService(IServiceCollection services, IConfiguration configuration)
     {
+        services.AddResponseCompression(opt =>
+        {
+            opt.EnableForHttps = true;
+        });
+
         services.Configure<GzipCompressionProviderOptions>(options =>
         {
             options.Level = System.IO.Compression.CompressionLevel.Fastest;

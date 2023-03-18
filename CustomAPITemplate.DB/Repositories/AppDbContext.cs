@@ -1,35 +1,24 @@
-﻿using CustomAPITemplate.DB.Models;
+﻿using CustomAPITemplate.DB.Interceptors;
+using CustomAPITemplate.DB.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 
 namespace CustomAPITemplate.DB.Repositories;
 
 public partial class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
 {
-    private readonly IConfiguration _configuration;
-    public AppDbContext(DbContextOptions<AppDbContext> options, IConfiguration configuration)
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor httpContextAccessor)
         : base(options)
     {
-        _configuration = configuration;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public virtual DbSet<RefreshToken> RefreshToken { get; set; }
     public virtual DbSet<Example> Example { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        //TODO: Secure connection string
-        if (!optionsBuilder.IsConfigured)
-        {
-            optionsBuilder.UseNpgsql(_configuration.GetConnectionString("NpgsqlConnection"));
-        }
-    }
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
-        OnModelCreatingPartial(modelBuilder);
-    }
-
-    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) 
+        => optionsBuilder.AddInterceptors(new SaveChangesAuditInterceptor(_httpContextAccessor));
 }

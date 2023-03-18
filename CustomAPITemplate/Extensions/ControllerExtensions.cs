@@ -44,12 +44,6 @@ public static class ControllerExtensions
     {
         var entity = mapper.Map<TEntity>(request);
 
-        var dataResponse = entity.InjectData<TKey, TEntity>(controller);
-        if (!dataResponse.Success)
-        {
-            return controller.BadRequest(dataResponse);
-        }
-
         var response = await repository.CreateAsync(entity, token).ConfigureAwait(false);
         if (!response.Success)
         {
@@ -62,7 +56,6 @@ public static class ControllerExtensions
     public static async Task<IActionResult> DeleteExtension<TKey, TEntity>(this ControllerBase controller, IRepository<TKey, TEntity> repository, TKey id, CancellationToken token)
         where TEntity : IEntityBase<TKey>
     {
-        //TODO: update userId, updateTime and updateIp
         var response = await repository.DeleteAsync(id, token).ConfigureAwait(false);
         if (!response.Success)
         {
@@ -77,12 +70,6 @@ public static class ControllerExtensions
         where TEntityRequest : IRequestBase
     {
         var entity = mapper.Map<TEntity>(request);
-
-        var dataResponse = entity.InjectData<TKey, TEntity>(controller, false);
-        if (!dataResponse.Success)
-        {
-            return controller.BadRequest(dataResponse);
-        }
 
         var response = await repository.UpdateAsync(id, entity, propertiesToIgnore, token);
 

@@ -47,6 +47,7 @@ public class BasicApiController<TKey, TEntity, TEntityRequest, TEntityResponse, 
     [HttpPost]
     [ClearCache(typeof(CreatedAtActionResult))]
     [Transaction]
+    [Sanitize]
     public virtual async Task<IActionResult> Post(TEntityRequest entity, CancellationToken token)
     {
         return await this.PostExtension<TKey, TEntity, TEntityRequest, TEntityResponse>(_repository, entity, _mapper, token).ConfigureAwait(false);
@@ -63,6 +64,7 @@ public class BasicApiController<TKey, TEntity, TEntityRequest, TEntityResponse, 
     [HttpPut("{id}")]
     [ClearCache(typeof(NoContentResult))]
     [Transaction]
+    [Sanitize]
     public virtual async Task<IActionResult> Put(TKey id, TEntityRequest entity, CancellationToken token)
     {
         return await this.PutExtension(_repository, id, entity, _mapper, null, token).ConfigureAwait(false);

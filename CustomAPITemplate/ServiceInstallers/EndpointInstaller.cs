@@ -1,5 +1,6 @@
 ﻿using CustomAPITemplate.Attributes;
 using CustomAPITemplate.Contract.V1;
+using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,11 +13,12 @@ public class EndpointInstaller : IServiceInstaller
         services.AddControllers(opt =>
         {
             opt.Filters.Add<ValidationFilter>();
-        })
-            .AddFluentValidation(conf =>
-            {
-                conf.RegisterValidatorsFromAssemblyContaining<IRequestBase>();
-            });
+        });
+
+        services.AddFluentValidationAutoValidation();
+        services.AddFluentValidationClientsideAdapters();
+        services.AddValidatorsFromAssemblyContaining<IRequestBase>();
+
         services.AddEndpointsApiExplorer();
 
         services.Configure<ApiBehaviorOptions>(opt =>

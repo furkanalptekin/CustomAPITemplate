@@ -12,8 +12,7 @@ public class ValidationFilter : IAsyncActionFilter
         {
             var errors = context.ModelState
                 .Where(x => x.Value.Errors.Any())
-                .ToDictionary(x => x.Key, x => x.Value.Errors.Select(error => error.ErrorMessage))
-                .ToList();
+                .ToDictionary(x => x.Key, x => x.Value.Errors.Select(error => error.ErrorMessage));
 
             var response = new Response();
             foreach (var error in errors)

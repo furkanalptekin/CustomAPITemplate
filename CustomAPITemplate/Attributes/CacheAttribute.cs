@@ -37,7 +37,7 @@ public class CacheAttribute : Attribute, IAsyncActionFilter
             context.Result = new ContentResult
             {
                 Content = cachedResponse,
-                ContentType = "application/json",
+                ContentType = "application/json; charset=utf-8",
                 StatusCode = 200
             };
             return;

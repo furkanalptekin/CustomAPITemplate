@@ -1,7 +1,11 @@
-﻿namespace CustomAPITemplate.Core.Extensions;
+﻿using Ganss.Xss;
+
+namespace CustomAPITemplate.Core.Extensions;
 
 public static class StringExtensions
 {
+    private static readonly HtmlSanitizer _sanitizer = new();
+
     public static string ToLowerTR(this string str)
         => str.ToLower(Constants.Cultures.TR);
 
@@ -13,4 +17,7 @@ public static class StringExtensions
 
     public static bool ContainsLoweredEN(this string str, string compare)
         => str.ToLowerEN().Contains(compare?.ToLowerEN());
+
+    public static string Sanitize(this string str) 
+        => string.IsNullOrWhiteSpace(str) ? str : _sanitizer.Sanitize(str);
 }

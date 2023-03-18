@@ -1,7 +1,12 @@
 ﻿using CustomAPITemplate.DB.Models;
 
 namespace CustomAPITemplate.DB.Entity;
-public interface IAuditEntityBase<TKey> : IEntityBase<TKey>
+public interface IAuditEntityBase<TKey> : IEntityBase<TKey>, IAuditEntityBase
+{
+
+}
+
+public interface IAuditEntityBase : IEntityBase
 {
     public DateTime CreationTime { get; set; }
     public Guid? CreatorUserId { get; set; }
@@ -9,7 +14,7 @@ public interface IAuditEntityBase<TKey> : IEntityBase<TKey>
     public DateTime? UpdateTime { get; set; }
     public Guid? UpdateUserId { get; set; }
     public string UpdateHostIP { get; set; }
-    
+
     public AppUser CreatorUser { get; set; }
     public AppUser UpdateUser { get; set; }
 }

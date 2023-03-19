@@ -3,35 +3,68 @@ using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace CustomAPITemplate.Core.Excel;
 
-public static partial class OpenXmlHelper
+internal static partial class OpenXmlHelper
 {
     private const string FONT_NAME = "Calibri";
     private const int FONT_SIZE = 11;
     private const string FONT_COLOR = "000000";
 
-    public static Cell GetCell(Type type, object value)
+    internal static Cell GetCell(CellProperties properties, Dictionary<string, uint> styleIndexDict)
     {
-        var cellValue = GetCellValue(type, value, out var isNull, out var hasNewLine);
+        var cellValue = GetCellValue(properties.TypeAsString, properties.Value, out var isNull, out var hasNewLine);
 
         return new Cell
         {
-            DataType = GetDataType(type),
+            DataType = GetDataType(properties.TypeAsString),
             CellValue = cellValue,
-            StyleIndex = GetCellStyleIndex(isNull, hasNewLine),
+            StyleIndex = GetCellStyleIndex(properties, styleIndexDict, isNull, hasNewLine),
         };
     }
 
-    //TODO: add more types
-    private static CellValues GetDataType(Type type)
+    private static CellValues GetDataType(string type)
     {
-        return CellValues.String;
+        switch (type)
+        {
+            case Constants.Types.DateTime:
+            case Constants.Types.DateTimeOffset:
+                return CellValues.Date;
+
+            case Constants.Types.Byte:
+            case Constants.Types.SByte:
+            case Constants.Types.Short:
+            case Constants.Types.UShort:
+            case Constants.Types.Int:
+            case Constants.Types.UInt:
+            case Constants.Types.Long:
+            case Constants.Types.ULong:
+            case Constants.Types.Float:
+            case Constants.Types.Double:
+            case Constants.Types.Decimal:
+                return CellValues.Number;
+
+            case Constants.Types.Bool:
+                return CellValues.Boolean;
+
+            default:
+                return CellValues.String;
+        }
     }
 
-    private static uint GetCellStyleIndex(bool isNull, bool hasNewLine)
+    private static uint GetCellStyleIndex(CellProperties properties, Dictionary<string, uint> styleIndexDict, bool isNull, bool hasNewLine)
     {
         if (isNull)
         {
             return 3U; // Cell Format 3 -> Yellow Fill
+        }
+
+        if (!string.IsNullOrWhiteSpace(properties.Format) && styleIndexDict.TryGetValue(properties.Format, out var index))
+        {
+            return index;
+        }
+
+        if (styleIndexDict.TryGetValue(properties.TypeAsString, out var typeIndex))
+        {
+            return typeIndex;
         }
 
         if (hasNewLine)
@@ -42,7 +75,7 @@ public static partial class OpenXmlHelper
         return 0U; // Default
     }
 
-    private static CellValue GetCellValue(Type type, object data, out bool isNull, out bool hasNewLine)
+    private static CellValue GetCellValue(string type, object data, out bool isNull, out bool hasNewLine)
     {
         isNull = false;
         hasNewLine = false;
@@ -53,27 +86,51 @@ public static partial class OpenXmlHelper
             return new CellValue(null);
         }
 
-        //TODO: add more types and culture
-        var value = type.ToString() switch
+        switch (type)
         {
-            "System.DateTime" => DateTime.Now.ToString(Constants.Cultures.TR),
-            _ => data.ToString(),
-        };
+            case Constants.Types.DateTime:
+                return new CellValue((DateTime)data);
 
+            case Constants.Types.DateTimeOffset:
+                return new CellValue((DateTimeOffset)data);
+
+            case Constants.Types.Byte:
+            case Constants.Types.SByte:
+            case Constants.Types.Short:
+            case Constants.Types.UShort:
+            case Constants.Types.Int:
+                return new CellValue((int)data);
+
+            case Constants.Types.Float:
+            case Constants.Types.Double:
+                return new CellValue((double)data);
+
+            case Constants.Types.Decimal:
+                return new CellValue((decimal)data);
+
+            case Constants.Types.Bool:
+                return new CellValue((bool)data);
+        }
+        
+        var value = data.ToString();
         value = RemoveInvalidXMLChars(value);
         hasNewLine = value.Contains('\n');
         return new CellValue(value);
     }
 
-    public static Stylesheet CreateStylesheet()
+    internal static (Stylesheet StyleSheet, Dictionary<string, uint> StyleIndexDict) CreateStylesheet(ExcelSheetData[] excelSheetDatas)
     {
-        return new Stylesheet
+        var (numeringFormats, formatsDict) = GetNumberingFormats(excelSheetDatas);
+        var (cellFormats, styleIndexDict) = GetCellFormats(formatsDict);
+
+        return (new Stylesheet
         {
             Fonts = GetFonts(),
             Fills = GetFills(),
             Borders = GetBorders(),
-            CellFormats = GetCellFormats(),
-        };
+            CellFormats = cellFormats,
+            NumberingFormats = numeringFormats
+        }, styleIndexDict);
     }
 
     private static Fonts GetFonts()
@@ -152,8 +209,10 @@ public static partial class OpenXmlHelper
         return borders;
     }
 
-    private static CellFormats GetCellFormats()
+    private static (CellFormats CellFormats, Dictionary<string, uint> StyleIndexDict)GetCellFormats(Dictionary<string, uint> formatsDict)
     {
+        var cellFormats = new CellFormats();
+
         var defaultFormat = new CellFormat()
         {
             FontId = 0,
@@ -186,10 +245,93 @@ public static partial class OpenXmlHelper
             Alignment = new Alignment { WrapText = true }
         };
 
-        var cellFormats = new CellFormats();
-        cellFormats.Append(defaultFormat, wrapTextFormat, headerFormat, nullFormat);
+        var cellFormatArray = new CellFormat[] { defaultFormat, wrapTextFormat, headerFormat, nullFormat };
+        cellFormats.Append(cellFormatArray);
 
-        return cellFormats;
+        var styleIndexDict = new Dictionary<string, uint>();
+        var styleIndex = (uint)cellFormatArray.Length;
+        foreach (var item in formatsDict)
+        {
+            if (styleIndexDict.TryGetValue(item.Key, out _))
+            {
+                continue;
+            }
+
+            var customFormat = new CellFormat
+            {
+                FontId = 0,
+                FillId = 0,
+                BorderId = 0,
+                NumberFormatId = item.Value,
+                ApplyNumberFormat = true
+            };
+
+            cellFormats.AppendChild(customFormat);
+
+            styleIndexDict.Add(item.Key, styleIndex++);
+        }
+
+        return (cellFormats, styleIndexDict);
+    }
+
+    private static (NumberingFormats NumeringFormats, Dictionary<string, uint> FormatsDict) GetNumberingFormats(ExcelSheetData[] excelSheetDatas)
+    {
+        var formats = new NumberingFormats();
+        var formatsDict = new Dictionary<string, uint>();
+        var formatId = 164u;
+
+        foreach (var (key, value) in GetDefaultFormats())
+        {
+            if (formatsDict.TryGetValue(key, out _))
+            {
+                continue;
+            }
+
+            var numberingFormat = new NumberingFormat
+            {
+                NumberFormatId = formatId,
+                FormatCode = value
+            };
+
+            formats.AppendChild(numberingFormat);
+            formatsDict.Add(key, formatId++);
+        }
+
+        foreach (var item in excelSheetDatas)
+        {
+            foreach (var formatCode in item.ColumnProperties.Where(x => !string.IsNullOrWhiteSpace(x.Format)).Select(x => x.Format))
+            {
+                if (formatsDict.TryGetValue(formatCode, out _))
+                {
+                    continue;
+                }
+
+                var numberingFormat = new NumberingFormat
+                {
+                    NumberFormatId = formatId,
+                    FormatCode = formatCode
+                };
+
+                formats.AppendChild(numberingFormat);
+                formatsDict.Add(formatCode, formatId++);
+            }
+        }
+        
+        return (formats, formatsDict);
+    }
+
+    private static Dictionary<string, string> GetDefaultFormats()
+    {
+        var formats = new Dictionary<string, string>
+        {
+            { Constants.Types.Float, "#,##0.00" },
+            { Constants.Types.Double, "#,##0.00" },
+            { Constants.Types.Decimal, "#,##0.00" },
+            { Constants.Types.DateTime, "dd.mm.yyyy hh:mm.ss" },
+            { Constants.Types.DateTimeOffset, "dd.mm.yyyy hh:mm.ss" },
+        };
+
+        return formats;
     }
 
     //https://stackoverflow.com/a/961504

@@ -1,7 +1,8 @@
 ﻿namespace CustomAPITemplate.Core.Excel;
 
-public class HeaderProperties
+public class ColumnProperties
 {
     public required string HeaderName { get; init; }
     public required string PropertyName { get; init; }
+    public string Format { get; init; }
 }

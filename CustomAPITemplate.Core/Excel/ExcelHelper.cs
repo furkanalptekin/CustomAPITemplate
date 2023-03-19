@@ -10,11 +10,14 @@ public class ExcelHelper
 {
     private readonly Type _stringType = typeof(string);
     private readonly IDictionary<string, List<PropertyInfo>> _properties = new Dictionary<string, List<PropertyInfo>>();
-    private readonly ExcelSheetData[] _excelSheetData;
+    private readonly ExcelSheetData[] _excelSheetDatas;
+    
+    private OpenXmlWriter writer;
+    private Dictionary<string, uint> styleIndexDict;
 
-    public ExcelHelper(params ExcelSheetData[] excelSheetData)
+    public ExcelHelper(params ExcelSheetData[] excelSheetDatas)
     {
-        _excelSheetData = excelSheetData;
+        _excelSheetDatas = excelSheetDatas;
         FillPropertiesDict();
     }
 
@@ -24,28 +27,27 @@ public class ExcelHelper
         using var workbook = SpreadsheetDocument.Create(memoryStream, SpreadsheetDocumentType.Workbook);
 
         var workbookPart = workbook.AddWorkbookPart();
-        OpenXmlWriter writer;
 
         var style = workbookPart.AddNewPart<WorkbookStylesPart>();
-        style.Stylesheet = OpenXmlHelper.CreateStylesheet();
+        (style.Stylesheet, styleIndexDict) = OpenXmlHelper.CreateStylesheet(_excelSheetDatas);
 
         var sheetPartIdList = new List<string>();
 
-        foreach (var excelSheetData in _excelSheetData)
+        foreach (var excelSheetData in _excelSheetDatas)
         {
             var sheetPart = workbook.WorkbookPart.AddNewPart<WorksheetPart>();
             sheetPartIdList.Add(workbookPart.GetIdOfPart(sheetPart));
 
             writer = OpenXmlWriter.Create(sheetPart);
 
-            WriteWorksheet(writer, excelSheetData);
+            WriteWorksheet(excelSheetData);
             
             writer.Close();
         }
 
         writer = OpenXmlWriter.Create(workbookPart);
 
-        WriteWorkbook(writer, sheetPartIdList);
+        WriteWorkbook(sheetPartIdList);
 
         writer.Close();
         workbook.Close();
@@ -53,16 +55,16 @@ public class ExcelHelper
         return memoryStream.ToArray();
     }
 
-    private void WriteWorkbook(OpenXmlWriter writer, List<string> sheetPartIdList)
+    private void WriteWorkbook(List<string> sheetPartIdList)
     {
         writer.WriteStartElement(new Workbook());
 
-        WriteSheets(writer, sheetPartIdList);
+        WriteSheets(sheetPartIdList);
 
         writer.WriteEndElement();
     }
 
-    private void WriteSheets(OpenXmlWriter writer, List<string> sheetPartIdList)
+    private void WriteSheets(List<string> sheetPartIdList)
     {
         writer.WriteStartElement(new Sheets());
 
@@ -72,35 +74,34 @@ public class ExcelHelper
             {
                 Id = sheetPartIdList[i],
                 SheetId = (uint)(i + 1),
-                Name = _excelSheetData[i].SheetName
+                Name = _excelSheetDatas[i].SheetName
             });
         }
 
         writer.WriteEndElement();
     }
 
-    private void WriteWorksheet(OpenXmlWriter writer, ExcelSheetData excelSheetData)
+    private void WriteWorksheet(ExcelSheetData excelSheetData)
     {
         writer.WriteStartElement(new Worksheet());
 
-        var headerCells = WriteColumnsAndGetHeaderCells(writer, excelSheetData);
-
-        WriteSheetData(writer, excelSheetData, headerCells);
+        WriteColumns(excelSheetData);
+        WriteSheetData(excelSheetData);
 
         writer.WriteEndElement();
     }
 
-    private void WriteSheetData(OpenXmlWriter writer, ExcelSheetData excelSheetData, List<Cell> headerCells)
+    private void WriteSheetData(ExcelSheetData excelSheetData)
     {
         writer.WriteStartElement(new SheetData());
 
-        WriteHeaderRow(writer, headerCells);
-        WriteContentRows(writer, excelSheetData);
+        WriteHeaderRow(excelSheetData);
+        WriteContentRows(excelSheetData);
 
         writer.WriteEndElement();
     }
 
-    private void WriteContentRows(OpenXmlWriter writer, ExcelSheetData excelSheetData)
+    private void WriteContentRows(ExcelSheetData excelSheetData)
     {
         var rowCount = 0;
         foreach (var item in excelSheetData.Data)
@@ -112,41 +113,40 @@ public class ExcelHelper
 
             writer.WriteStartElement(new Row());
 
-            foreach (var (type, value) in GetValues(excelSheetData, item))
+            foreach (var properties in GetValues(excelSheetData, item))
             {
-                writer.WriteElement(OpenXmlHelper.GetCell(type, value));
+                writer.WriteElement(OpenXmlHelper.GetCell(properties, styleIndexDict));
             }
 
             writer.WriteEndElement();
         }
     }
 
-    private void WriteHeaderRow(OpenXmlWriter writer, List<Cell> headerCells)
+    private void WriteHeaderRow(ExcelSheetData excelSheetData)
     {
         writer.WriteStartElement(new Row());
 
-        foreach (var item in headerCells)
+        foreach (var item in excelSheetData.ColumnProperties)
         {
-            writer.WriteElement(item);
+            var cell = new Cell
+            {
+                DataType = CellValues.String,
+                CellValue = new CellValue(item.HeaderName),
+                StyleIndex = 2 //Header Style
+            };
+
+            writer.WriteElement(cell);
         }
 
         writer.WriteEndElement();
     }
 
-    private List<Cell> WriteColumnsAndGetHeaderCells(OpenXmlWriter writer, ExcelSheetData excelSheetData)
+    private void WriteColumns(ExcelSheetData excelSheetData)
     {
         writer.WriteStartElement(new Columns());
-        var headerCells = new List<Cell>();
 
-        for (int i = 0; i < excelSheetData.HeaderProperties.Count; i++)
+        for (int i = 0; i < excelSheetData.ColumnProperties.Count; i++)
         {
-            var cell = new Cell
-            {
-                DataType = CellValues.String,
-                CellValue = new CellValue(excelSheetData.HeaderProperties[i].HeaderName),
-                StyleIndex = 2 //Header Style
-            };
-
             var column = new Column
             {
                 Min = (uint)i + 1,
@@ -156,18 +156,16 @@ public class ExcelHelper
             };
 
             writer.WriteElement(column);
-            headerCells.Add(cell);
         }
 
         writer.WriteEndElement();
-        return headerCells;
     }
 
     private void FillPropertiesDict()
     {
-        foreach (var item in _excelSheetData)
+        foreach (var item in _excelSheetDatas)
         {
-            var headers = item.HeaderProperties.Select(x => x.PropertyName).ToList();
+            var headers = item.ColumnProperties.Select(x => x.PropertyName).ToList();
             var properties = item.Data
                 .First()
                 .GetType()
@@ -179,28 +177,40 @@ public class ExcelHelper
         }
     }
 
-    private IEnumerable<(Type type, object value)> GetValues(ExcelSheetData sheetData, object data)
+    private IEnumerable<CellProperties> GetValues(ExcelSheetData sheetData, object data)
     {
-        foreach (var item in sheetData.HeaderProperties)
+        foreach (var item in sheetData.ColumnProperties)
         {
-            yield return GetValueAndTypeByPropertyName(data, item.PropertyName, sheetData.SheetName);
+            yield return GetValueAndTypeByPropertyName(data, item, sheetData.SheetName);
         }
     }
 
-    private (Type type, object value) GetValueAndTypeByPropertyName(object data, string propertyName, string sheetName)
+    private CellProperties GetValueAndTypeByPropertyName(object data, ColumnProperties columnProperties, string sheetName)
     {
+        var cellProperties = new CellProperties
+        {
+            Type = _stringType,
+            Value = string.Empty,
+            Format = columnProperties.Format,
+        };
+
         if (!_properties.TryGetValue(sheetName, out var properties))
         {
-            return (_stringType, string.Empty);
+            return cellProperties;
         }
 
-        var prop = properties.FirstOrDefault(x => x.Name == propertyName);
+        var prop = properties.FirstOrDefault(x => x.Name == columnProperties.PropertyName);
         if (prop == null)
         {
-            return (_stringType, string.Empty);
+            return cellProperties;
         }
 
-        var value = prop.GetValue(data, null);
-        return (value != null ? value.GetType() : _stringType, value);
+        cellProperties.Value = prop.GetValue(data, null);
+        if (cellProperties.Value != null)
+        {
+            cellProperties.Type = cellProperties.Value.GetType();
+        }
+
+        return cellProperties;
     }
 }

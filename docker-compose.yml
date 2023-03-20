@@ -3,6 +3,7 @@ version: '3.8'
 networks: 
     localdev:
         name: localdev
+        driver: bridge
 
 services:
     customapitemplate:
@@ -14,12 +15,15 @@ services:
         depends_on:
             - db-server
             - redis
+            - elastic-search
         networks:
             - localdev
 
     db-server:
         image: postgres
         container_name: postgres
+        volumes:
+            - postgres:/usr/share/postgres/data 
         environment:
             - POSTGRES_USER=customapitemplateuser
             - POSTGRES_PASSWORD=customapitemplatepasswords
@@ -32,7 +36,52 @@ services:
     redis:
         image: redis
         container_name: redis
+        volumes:
+            - redis:/usr/share/redis/data 
         ports:
             - "6379:6379"
         networks:
             - localdev
+
+    elastic-search:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
+        container_name: elasticsearch
+        volumes:
+            - elastic-search:/usr/share/elasticsearch/data
+        environment:
+            - node.name=elastic-search
+            - discovery.type=single-node
+            - bootstrap.memory_lock=true
+            - "ES_JAVA_POTS=-Xms512m -Xmx512m"
+            - xpack.security.enabled=false
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
+        ports:
+            - 9200:9200
+        networks:
+            - localdev
+            
+    kibana:
+        image: docker.elastic.co/kibana/kibana:8.6.2
+        container_name: kibana
+        ports:
+            - 5601:5601
+        environment:
+            - ELASTICSEARCH_URL=http://elasticsearch:9200
+            - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+            - xpack.security.enabled=false
+        networks:
+            - localdev
+
+volumes:
+    postgres:
+        name: postgres
+        external: true
+    redis:
+        name: redis
+        external: true
+    elastic-search:
+        name: elastic-search
+        external: true

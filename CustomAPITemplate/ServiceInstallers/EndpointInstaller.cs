@@ -12,6 +12,7 @@ public class EndpointInstaller : IServiceInstaller
     {
         services.AddControllers(opt =>
         {
+            opt.Filters.Add<GlobalExceptionFilter>();
             opt.Filters.Add<ValidationFilter>();
         });
 

@@ -1,12 +1,15 @@
-using System.Diagnostics;
 using CustomAPITemplate.DB.Models;
 using CustomAPITemplate.DB.Repositories;
 using CustomAPITemplate.Extensions;
 using CustomAPITemplate.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, configuration)
+    => configuration.ReadFrom.Configuration(context.Configuration));
 
 builder.InstallServices();
 
@@ -22,6 +25,8 @@ using (var scope = app.Services.CreateScope())
 
     await DefaultDbValues.CreateDefaultUsers(userManager, roleManager);
 }
+
+app.UseSerilogRequestLoggingWithOptions();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

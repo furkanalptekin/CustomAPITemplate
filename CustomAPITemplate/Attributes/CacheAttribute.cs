@@ -5,6 +5,7 @@ using CustomAPITemplate.Core.Extensions;
 using CustomAPITemplate.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Serilog;
 
 namespace CustomAPITemplate.Attributes;
 
@@ -34,6 +35,7 @@ public class CacheAttribute : Attribute, IAsyncActionFilter
 
         if (!string.IsNullOrWhiteSpace(cachedResponse))
         {
+            Log.ForContext<CacheAttribute>().Information("Returning from cache: {CacheKey}", cacheKey);
             context.Result = new ContentResult
             {
                 Content = cachedResponse,

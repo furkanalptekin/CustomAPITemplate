@@ -25,7 +25,6 @@ public class ExcelHelper
     {
         using var memoryStream = new MemoryStream();
         using var workbook = SpreadsheetDocument.Create(memoryStream, SpreadsheetDocumentType.Workbook);
-
         var workbookPart = workbook.AddWorkbookPart();
 
         var style = workbookPart.AddNewPart<WorkbookStylesPart>();
@@ -104,6 +103,12 @@ public class ExcelHelper
     private void WriteContentRows(ExcelSheetData excelSheetData)
     {
         var rowCount = 0;
+
+        if (excelSheetData.Data == null || excelSheetData.Data.Count == 0)
+        {
+            return;
+        }
+
         foreach (var item in excelSheetData.Data)
         {
             if (++rowCount >= 1_048_575) // Excel Row Limit - 1 (Header)
@@ -165,6 +170,11 @@ public class ExcelHelper
     {
         foreach (var item in _excelSheetDatas)
         {
+            if (item.Data == null || item.Data.Count == 0)
+            {
+                continue;
+            }
+
             var headers = item.ColumnProperties.Select(x => x.PropertyName).ToList();
             var properties = item.Data
                 .First()

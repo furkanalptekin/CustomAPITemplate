@@ -9,7 +9,9 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((context, configuration)
-    => configuration.ReadFrom.Configuration(context.Configuration));
+    => configuration
+        .Enrich.With<UserIdEnricher>()
+        .ReadFrom.Configuration(context.Configuration));
 
 builder.InstallServices();
 
@@ -26,7 +28,7 @@ using (var scope = app.Services.CreateScope())
     await DefaultDbValues.CreateDefaultUsers(userManager, roleManager);
 }
 
-app.UseSerilogRequestLoggingWithOptions();
+app.UseSerilogRequestLogging();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

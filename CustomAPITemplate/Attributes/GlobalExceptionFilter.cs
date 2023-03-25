@@ -13,11 +13,13 @@ public class GlobalExceptionFilter : IExceptionFilter
             return;
         }
 
-        context.Result = new ObjectResult($"Internal Server Error in {context.ActionDescriptor.DisplayName}")
+        var supportId = Guid.NewGuid();
+
+        context.Result = new ObjectResult($"Internal Server Error in {context.ActionDescriptor.DisplayName}, Support Id: {supportId}")
         {
             StatusCode = 500
         };
 
-        Log.ForContext<GlobalExceptionFilter>().Fatal(context.Exception, "Error in {DisplayName}", context.ActionDescriptor.DisplayName);
+        Log.ForContext<GlobalExceptionFilter>().Fatal(context.Exception, "Error in {DisplayName}, Support Id: {SupportId}", context.ActionDescriptor.DisplayName, supportId);
     }
 }

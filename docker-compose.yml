@@ -23,7 +23,7 @@ services:
         image: postgres
         container_name: postgres
         volumes:
-            - postgres:/usr/share/postgres/data 
+            - postgres:/var/lib/postgresql/data
         environment:
             - POSTGRES_USER=customapitemplateuser
             - POSTGRES_PASSWORD=customapitemplatepasswords
@@ -37,7 +37,7 @@ services:
         image: redis
         container_name: redis
         volumes:
-            - redis:/usr/share/redis/data 
+            - redis:/data
         ports:
             - "6379:6379"
         networks:

@@ -1,0 +1,119 @@
+{
+    "$schema": "https://json.schemastore.org/template",
+    "author": "Necati Furkan Alptekin",
+    "classifications": ["Web", "Api"],
+    "identity": "CustomAPITemplate",
+    "name": "Custom Api Template",
+    "shortName": "customapitemplate",
+    "sourceName": "CustomAPITemplate",
+    "defaultName": "CustomAPITemplate",
+    "tags": {
+        "language": "C#",
+        "type": "solution"
+    },
+    "preferNameDirectory": true,
+    "symbols": {
+        "DatabaseProvider": {
+            "type": "parameter",
+            "description": "Database Provider",
+            "datatype": "choice",
+            "enableQuotelessLiterals": true,
+            "choices": [
+                {
+                    "choice": "PostgreSQL"
+                },
+                {
+                    "choice": "SqlServer"
+                }
+            ],
+            "defaultValue": "SqlServer"
+        },
+        "Cache": {
+            "type": "parameter",
+            "description": "Cache Type",
+            "datatype": "choice",
+            "enableQuotelessLiterals": true,
+            "choices": [
+                {
+                    "choice": "Redis"
+                },
+                {
+                    "choice": "NoCache"
+                }
+            ],
+            "defaultValue": "NoCache"
+        },
+        "IsElasticSearchEnabled": {
+            "type": "parameter",
+            "description": "Is Elastic Search and Kibana Enabled",
+            "datatype": "bool",
+            "defaultValue": "false"
+        },
+        "IsDockerEnabled": {
+            "type": "parameter",
+            "description": "Is Docker and Docker Compose Enabled",
+            "datatype": "bool",
+            "defaultValue": "false"
+        },
+        "DockerProjectName": {
+            "type": "parameter",
+            "datatype": "text",
+            "defaultValue": "custom-api-template",
+            "description": "Docker and Docker Compose Project Name"
+        },
+        "DockerProjectNameLowered": {
+            "type": "generated",
+            "generator": "casing",
+            "parameters": {
+                "source": "DockerProjectName",
+                "toLower": true
+            },
+            "replaces": "(DockerProjectName)"
+        },
+        "Secret1": {
+            "type": "generated",
+            "generator": "guid",
+            "parameters": {
+                "defaultFormat": "N"
+            },
+            "replaces": "BA80686F21D248668DE531E27BEB06E4"
+        },        
+        "Secret2": {
+            "type": "generated",
+            "generator": "guid",
+            "parameters": {
+                "defaultFormat": "N"
+            },
+            "replaces": "0EC2D4F496194D28841577E8DE277590"
+        }
+    },
+    "sources": [
+        {
+            "modifiers": [
+                {
+                    "condition": "(Cache == \"NoCache\")",
+                    "exclude": [
+                        "CustomAPITemplate/CustomAPITemplate/Attributes/CacheAttribute.cs",
+                        "CustomAPITemplate/CustomAPITemplate/Attributes/ClearCache.cs",
+                        "CustomAPITemplate/CustomAPITemplate/ServiceInstallers/RedisInstaller.cs",
+                        "CustomAPITemplate/CustomAPITemplate.Core/Configuration/RedisCacheSettings.cs"
+                    ]
+                },
+                {
+                    "condition": "(!IsDockerEnabled)",
+                    "exclude": [
+                        "**/.dockerignore",
+                        "**/docker-compose.*",
+                        "**/Dockerfile"
+                    ]
+                },
+                {
+                    "exclude": [
+                        "**/[Bb]in/**",
+                        "**/[Oo]bj/**"
+                    ]
+                }
+            ]
+        }
+    ]
+}

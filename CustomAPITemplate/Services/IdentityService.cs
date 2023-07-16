@@ -171,8 +171,17 @@ public class IdentityService : IIdentityService
             return response;
         }
 
-        response.Value = await GenerateAuthenticationResultAsync(user);
+        if (user.IsBanned)
+        {
+            response.Results.Add(new()
+            {
+                Message = "User is banned",
+                Severity = Severity.Error
+            });
+            return response;
+        }
 
+        response.Value = await GenerateAuthenticationResultAsync(user);
         return response;
     }
 

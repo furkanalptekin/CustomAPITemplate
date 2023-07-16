@@ -12,7 +12,12 @@ public class DbInstaller : IServiceInstaller
         services.AddDbContext<AppDbContext>(opt =>
         {
             //TODO: Secure connection string
+#if (DatabaseProvider == "SqlServer")
+            opt.UseSqlServer(configuration.GetConnectionString("SqlServerConnection"));
+#endif
+#if (DatabaseProvider == "PostgreSQL")
             opt.UseNpgsql(configuration.GetConnectionString("NpgsqlConnection"));
+#endif
         });
 
         services.AddIdentity<AppUser, AppRole>()

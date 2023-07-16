@@ -31,21 +31,27 @@ public class BasicApiController<TKey, TEntity, TEntityRequest, TEntityResponse, 
     }
 
     [HttpGet]
+#if (Cache != "NoCache")
     [Cache]
+#endif
     public virtual async Task<IActionResult> Get(CancellationToken token)
     {
         return await this.GetExtension<TKey, TEntity, TEntityResponse>(_repository, _mapper, token).ConfigureAwait(false);
     }
 
     [HttpGet("{id}")]
+#if (Cache != "NoCache")
     [Cache]
+#endif
     public virtual async Task<IActionResult> Get(TKey id, CancellationToken token)
     {
         return await this.GetExtension<TKey, TEntity, TEntityResponse>(id, _repository, _mapper, token).ConfigureAwait(false);
     }
 
     [HttpPost]
+#if (Cache != "NoCache")
     [ClearCache(typeof(CreatedAtActionResult))]
+#endif
     [Transaction]
     [Sanitize]
     public virtual async Task<IActionResult> Post(TEntityRequest entity, CancellationToken token)
@@ -54,7 +60,9 @@ public class BasicApiController<TKey, TEntity, TEntityRequest, TEntityResponse, 
     }
 
     [HttpDelete("{id}")]
+#if (Cache != "NoCache")
     [ClearCache(typeof(NoContentResult))]
+#endif
     [Transaction]
     public virtual async Task<IActionResult> Delete(TKey id, CancellationToken token)
     {
@@ -62,7 +70,9 @@ public class BasicApiController<TKey, TEntity, TEntityRequest, TEntityResponse, 
     }
 
     [HttpPut("{id}")]
+#if (Cache != "NoCache")
     [ClearCache(typeof(NoContentResult))]
+#endif
     [Transaction]
     [Sanitize]
     public virtual async Task<IActionResult> Put(TKey id, TEntityRequest entity, CancellationToken token)

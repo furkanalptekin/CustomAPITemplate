@@ -6,46 +6,74 @@ networks:
         driver: bridge
 
 services:
-    customapitemplate:
-        image: ${DOCKER_REGISTRY-}customapitemplate
+    (DockerProjectName):
+        image: ${DOCKER_REGISTRY-}(DockerProjectName)
         restart: always
         build:
             context: .
             dockerfile: CustomAPITemplate/Dockerfile
         depends_on:
-            - db-server
+#if (DatabaseProvider == "PostgreSQL")
+            - postgres
+#endif
+#if (DatabaseProvider == "SqlServer")
+            - mssql
+#endif
+#if (Cache == "Redis")
             - redis
+#endif
+#if (IsElasticSearchEnabled)
             - elastic-search
+#endif
         networks:
             - localdev
-
-    db-server:
+        ports:
+            - "5000:443"
+            - "5001:80"
+#if (DatabaseProvider == "PostgreSQL")
+    postgres:
         image: postgres
-        container_name: postgres
+        container_name: (DockerProjectName)-postgres
         volumes:
             - postgres:/var/lib/postgresql/data
         environment:
-            - POSTGRES_USER=customapitemplateuser
-            - POSTGRES_PASSWORD=customapitemplatepasswords
-            - POSTGRES_DB=customapitemplateexample
+            - POSTGRES_PASSWORD=Test123+
         ports:
-            - "1400:5432"
+            - "5432:5432"
         networks:
             - localdev
+#endif
 
+#if (DatabaseProvider == "SqlServer")          
+    mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        container_name: (DockerProjectName)-mssql
+        volumes:
+            - mssql:/var/opt/mssql
+        environment:
+            - SA_PASSWORD=Test123+
+            - ACCEPT_EULA=Y
+        ports:
+            - "1433:1433"
+        networks:
+            - localdev
+#endif
+
+#if (Cache == "Redis")
     redis:
         image: redis
-        container_name: redis
+        container_name: (DockerProjectName)-redis
         volumes:
             - redis:/data
         ports:
             - "6379:6379"
         networks:
             - localdev
-
+#endif
+#if (IsElasticSearchEnabled)
     elastic-search:
         image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
-        container_name: elasticsearch
+        container_name: (DockerProjectName)-elasticsearch
         volumes:
             - elastic-search:/usr/share/elasticsearch/data
         environment:
@@ -65,23 +93,30 @@ services:
             
     kibana:
         image: docker.elastic.co/kibana/kibana:8.6.2
-        container_name: kibana
+        container_name: (DockerProjectName)-kibana
         ports:
             - 5601:5601
         environment:
-            - ELASTICSEARCH_URL=http://elasticsearch:9200
-            - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+            - ELASTICSEARCH_URL=http://elastic-search:9200
+            - ELASTICSEARCH_HOSTS=http://elastic-search:9200
             - xpack.security.enabled=false
         networks:
             - localdev
-
+#endif
 volumes:
+#if (DatabaseProvider == "PostgreSQL")
     postgres:
-        name: postgres
-        external: true
+        name: (DockerProjectName)-postgres
+#endif
+#if (DatabaseProvider == "SqlServer")
+    mssql:
+        name: (DockerProjectName)-mssql
+#endif
+#if (Cache == "Redis")
     redis:
-        name: redis
-        external: true
+        name: (DockerProjectName)-redis
+#endif
+#if (IsElasticSearchEnabled)
     elastic-search:
-        name: elastic-search
-        external: true
+        name: (DockerProjectName)-elastic-search
+#endif

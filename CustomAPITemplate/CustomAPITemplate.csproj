@@ -5,8 +5,10 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>6aa1496d-eef8-4ba4-8627-2a444c29ab6b</UserSecretsId>
+<!--#if (IsDockerEnabled)
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
+#endif-->
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,11 +26,15 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="7.0.4" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.17.0" />
+<!--#if (DatabaseProvider == "PostgreSQL")
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.3" />
+#endif-->
     <PackageReference Include="Serilog" Version="2.12.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="6.1.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="3.4.0" />
+<!--#if (IsElasticSearchEnabled)
     <PackageReference Include="Serilog.Sinks.Elasticsearch" Version="9.0.0" />
+#endif-->
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
@@ -37,9 +43,10 @@
     <ProjectReference Include="..\CustomAPITemplate.Core\CustomAPITemplate.Core.csproj" />
     <ProjectReference Include="..\CustomAPITemplate.DB\CustomAPITemplate.DB.csproj" />
   </ItemGroup>
-
+<!--#if (IsDockerEnabled)
   <ItemGroup>
     <None Remove="..\.dockerignore" />
   </ItemGroup>
+#endif-->
 
 </Project>

@@ -11,8 +11,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CustomAPITemplate.DB", "Cus
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CustomAPITemplate.Contract", "CustomAPITemplate.Contract\CustomAPITemplate.Contract.csproj", "{E35BA740-F7C1-4990-A34A-D0F7557BAFCA}"
 EndProject
+#if (IsDockerEnabled)
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{9E4ED6AA-8314-44A9-96D2-AEFE2640C11B}"
 EndProject
+#endif
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -35,10 +37,12 @@ Global
 		{E35BA740-F7C1-4990-A34A-D0F7557BAFCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E35BA740-F7C1-4990-A34A-D0F7557BAFCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E35BA740-F7C1-4990-A34A-D0F7557BAFCA}.Release|Any CPU.Build.0 = Release|Any CPU
+		#if (IsDockerEnabled)
 		{9E4ED6AA-8314-44A9-96D2-AEFE2640C11B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9E4ED6AA-8314-44A9-96D2-AEFE2640C11B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E4ED6AA-8314-44A9-96D2-AEFE2640C11B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E4ED6AA-8314-44A9-96D2-AEFE2640C11B}.Release|Any CPU.Build.0 = Release|Any CPU
+		#endif
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -9,6 +9,13 @@ public class CompressionInstaller : IServiceInstaller
         services.AddResponseCompression(opt =>
         {
             opt.EnableForHttps = true;
+            opt.Providers.Add<BrotliCompressionProvider>();
+            opt.Providers.Add<GzipCompressionProvider>();
+        });
+
+        services.Configure<BrotliCompressionProviderOptions>(options =>
+        {
+            options.Level = System.IO.Compression.CompressionLevel.Fastest;
         });
 
         services.Configure<GzipCompressionProviderOptions>(options =>

@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 
-namespace CustomAPITemplate.Core.Extensions;
+namespace CustomAPITemplate.Core;
 
 public static class AutoMapperExtensions
 {

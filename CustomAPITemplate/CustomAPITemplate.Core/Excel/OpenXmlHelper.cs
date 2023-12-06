@@ -111,7 +111,7 @@ internal static partial class OpenXmlHelper
             case Constants.Types.Bool:
                 return new CellValue((bool)data);
         }
-        
+
         var value = data.ToString();
         value = RemoveInvalidXMLChars(value);
         hasNewLine = value.Contains('\n');
@@ -209,7 +209,7 @@ internal static partial class OpenXmlHelper
         return borders;
     }
 
-    private static (CellFormats CellFormats, Dictionary<string, uint> StyleIndexDict)GetCellFormats(Dictionary<string, uint> formatsDict)
+    private static (CellFormats CellFormats, Dictionary<string, uint> StyleIndexDict) GetCellFormats(Dictionary<string, uint> formatsDict)
     {
         var cellFormats = new CellFormats();
 
@@ -316,7 +316,7 @@ internal static partial class OpenXmlHelper
                 formatsDict.Add(formatCode, formatId++);
             }
         }
-        
+
         return (formats, formatsDict);
     }
 
@@ -346,5 +346,30 @@ internal static partial class OpenXmlHelper
         }
 
         return InvalidXmlCharsRegex().Replace(text.Trim(), "");
+    }
+
+    //https://gist.github.com/weitzhandler/97089718c5f3bac56bc5521c5317b742
+    internal static string GetCellReference(int index)
+    {
+        const int AsciiTrim = 'A' - 1;
+        const int LastChar = 'Z' - AsciiTrim;
+
+        var colNumber = index;
+        var output = new Stack<char>();
+
+        while (colNumber > 0)
+        {
+            var current = colNumber % LastChar;
+
+            if (current == 0)
+            {
+                current = LastChar;
+            }
+
+            output.Push((char)(current + AsciiTrim));
+            colNumber = (colNumber - current) / LastChar;
+        }
+
+        return string.Concat(output);
     }
 }

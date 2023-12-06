@@ -1,5 +1,4 @@
 ﻿#if (DatabaseProvider == "PostgreSQL")
-using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -196,17 +195,17 @@ namespace CustomAPITemplate.DB.Migrations
                 name: "RefreshToken",
                 columns: table => new
                 {
-                    Token = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     JwtId = table.Column<string>(type: "text", nullable: true),
                     CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ExpiryDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Used = table.Column<bool>(type: "boolean", nullable: false),
                     Invalidated = table.Column<bool>(type: "boolean", nullable: false),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false)
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RefreshToken", x => x.Token);
+                    table.PrimaryKey("PK_RefreshToken", x => x.Id);
                     table.ForeignKey(
                         name: "FK_RefreshToken_AspNetUsers_UserId",
                         column: x => x.UserId,
@@ -268,6 +267,11 @@ namespace CustomAPITemplate.DB.Migrations
                 column: "UpdateUserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RefreshToken_IsActive",
+                table: "RefreshToken",
+                column: "IsActive");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RefreshToken_UserId",
                 table: "RefreshToken",
                 column: "UserId");
@@ -305,6 +309,7 @@ namespace CustomAPITemplate.DB.Migrations
         }
     }
 }
+
 #endif
 #if (DatabaseProvider == "SqlServer")
 using System;
@@ -503,17 +508,17 @@ namespace CustomAPITemplate.DB.Migrations
                 name: "RefreshToken",
                 columns: table => new
                 {
-                    Token = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     JwtId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Used = table.Column<bool>(type: "bit", nullable: false),
                     Invalidated = table.Column<bool>(type: "bit", nullable: false),
-                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RefreshToken", x => x.Token);
+                    table.PrimaryKey("PK_RefreshToken", x => x.Id);
                     table.ForeignKey(
                         name: "FK_RefreshToken_AspNetUsers_UserId",
                         column: x => x.UserId,
@@ -575,6 +580,11 @@ namespace CustomAPITemplate.DB.Migrations
                 name: "IX_Example_UpdateUserId",
                 table: "Example",
                 column: "UpdateUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshToken_IsActive",
+                table: "RefreshToken",
+                column: "IsActive");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RefreshToken_UserId",

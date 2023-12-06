@@ -1,17 +1,10 @@
-﻿using CustomAPITemplate.Core.Extensions;
+﻿using CustomAPITemplate.Core;
 using StackExchange.Redis;
 
 namespace CustomAPITemplate.Services;
 
-public class ResponseCacheService : IResponseCacheService
+public class ResponseCacheService(IConnectionMultiplexer _connectionMultiplexer) : IResponseCacheService
 {
-    private readonly IConnectionMultiplexer _connectionMultiplexer;
-
-    public ResponseCacheService(IConnectionMultiplexer connectionMultiplexer)
-    {
-        _connectionMultiplexer = connectionMultiplexer;
-    }
-
     public async Task<string> GetCacheResponseAsync(string key)
     {
         var db = _connectionMultiplexer.GetDatabase();

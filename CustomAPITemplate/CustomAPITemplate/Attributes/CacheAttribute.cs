@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using System.Text;
+using CustomAPITemplate.Core;
 using CustomAPITemplate.Core.Configuration;
-using CustomAPITemplate.Core.Extensions;
 using CustomAPITemplate.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -10,15 +10,8 @@ using Serilog;
 namespace CustomAPITemplate.Attributes;
 
 [AttributeUsage(AttributeTargets.Method)]
-public class CacheAttribute : Attribute, IAsyncActionFilter
+public class CacheAttribute(int _ttl = 900) : Attribute, IAsyncActionFilter
 {
-    private readonly int _ttl;
-
-    public CacheAttribute(int ttl = 900)
-    {
-        _ttl = ttl;
-    }
-
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var redisCacheSettings = context.HttpContext.RequestServices.GetRequiredService<RedisCacheSettings>();
@@ -96,7 +89,7 @@ public class CacheAttribute : Attribute, IAsyncActionFilter
         {
             if (!property.CanRead || !property.CanWrite)
                 continue;
-            
+
             builder.Append($"|{property.Name}-{property.GetValue(requestData, null)}");
         }
 

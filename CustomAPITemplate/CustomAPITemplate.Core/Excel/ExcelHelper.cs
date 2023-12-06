@@ -1,7 +1,7 @@
-﻿using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
+﻿using System.Reflection;
 using DocumentFormat.OpenXml;
-using System.Reflection;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace CustomAPITemplate.Core.Excel;
 
@@ -9,9 +9,9 @@ namespace CustomAPITemplate.Core.Excel;
 public class ExcelHelper
 {
     private readonly Type _stringType = typeof(string);
-    private readonly IDictionary<string, List<PropertyInfo>> _properties = new Dictionary<string, List<PropertyInfo>>();
+    private readonly Dictionary<string, List<PropertyInfo>> _properties = [];
     private readonly ExcelSheetData[] _excelSheetDatas;
-    
+
     private OpenXmlWriter writer;
     private Dictionary<string, uint> styleIndexDict;
 
@@ -40,7 +40,7 @@ public class ExcelHelper
             writer = OpenXmlWriter.Create(sheetPart);
 
             WriteWorksheet(excelSheetData);
-            
+
             writer.Close();
         }
 
@@ -49,7 +49,7 @@ public class ExcelHelper
         WriteWorkbook(sheetPartIdList);
 
         writer.Close();
-        workbook.Close();
+        workbook.Save();
 
         return memoryStream.ToArray();
     }
@@ -67,7 +67,7 @@ public class ExcelHelper
     {
         writer.WriteStartElement(new Sheets());
 
-        for (int i = 0; i < sheetPartIdList.Count; i++)
+        for (var i = 0; i < sheetPartIdList.Count; i++)
         {
             writer.WriteElement(new Sheet
             {
@@ -86,6 +86,7 @@ public class ExcelHelper
 
         WriteColumns(excelSheetData);
         WriteSheetData(excelSheetData);
+        WriteAutoFilter(excelSheetData);
 
         writer.WriteEndElement();
     }
@@ -98,6 +99,14 @@ public class ExcelHelper
         WriteContentRows(excelSheetData);
 
         writer.WriteEndElement();
+    }
+
+    private void WriteAutoFilter(ExcelSheetData excelSheetData)
+    {
+        writer.WriteElement(new AutoFilter
+        {
+            Reference = $"A1:{OpenXmlHelper.GetCellReference(excelSheetData.ColumnProperties.Count)}1"
+        });
     }
 
     private void WriteContentRows(ExcelSheetData excelSheetData)
@@ -150,7 +159,7 @@ public class ExcelHelper
     {
         writer.WriteStartElement(new Columns());
 
-        for (int i = 0; i < excelSheetData.ColumnProperties.Count; i++)
+        for (var i = 0; i < excelSheetData.ColumnProperties.Count; i++)
         {
             var column = new Column
             {

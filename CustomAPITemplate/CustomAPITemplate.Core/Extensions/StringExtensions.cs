@@ -1,6 +1,6 @@
 ﻿using Ganss.Xss;
 
-namespace CustomAPITemplate.Core.Extensions;
+namespace CustomAPITemplate.Core;
 
 public static class StringExtensions
 {
@@ -18,6 +18,6 @@ public static class StringExtensions
     public static bool ContainsLoweredEN(this string str, string compare)
         => str.ToLowerEN().Contains(compare?.ToLowerEN());
 
-    public static string Sanitize(this string str) 
+    public static string Sanitize(this string str)
         => string.IsNullOrWhiteSpace(str) ? str : _sanitizer.Sanitize(str);
 }

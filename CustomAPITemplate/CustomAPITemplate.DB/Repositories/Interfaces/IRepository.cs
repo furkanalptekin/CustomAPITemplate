@@ -2,7 +2,7 @@
 using CustomAPITemplate.Core;
 using CustomAPITemplate.DB.Entity;
 
-namespace CustomAPITemplate.DB.Repositories.Interfaces;
+namespace CustomAPITemplate.DB.Repositories;
 
 public interface IRepository<TKey, TEntity> where TEntity : IEntityBase<TKey>
 {

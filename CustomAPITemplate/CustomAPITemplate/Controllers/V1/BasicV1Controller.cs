@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using CustomAPITemplate.Contract.V1;
 using CustomAPITemplate.DB.Entity;
-using CustomAPITemplate.DB.Repositories.Interfaces;
+using CustomAPITemplate.DB.Repositories;
 using CustomAPITemplate.Helpers;
 using Microsoft.AspNetCore.Mvc;
 

@@ -1,7 +1,5 @@
-﻿using System.Linq;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using CustomAPITemplate.Core;
-using CustomAPITemplate.Core.Extensions;
 using CustomAPITemplate.DB.Entity;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,17 +7,13 @@ namespace CustomAPITemplate.DB.Extensions;
 
 public static class DbContextExtensions
 {
-    public static async Task<Response<TEntity>> AddEntityAsync<TKey, TEntity>(this DbContext context, TEntity entity, CancellationToken token) where TEntity : EntityBase<TKey>
+    public static async Task<Response<TEntity>> AddEntityAsync<TKey, TEntity>(this DbContext context, TEntity entity, CancellationToken token)
+        where TEntity : EntityBase<TKey>
     {
         var response = new Response<TEntity>();
         if (entity == null)
         {
-            response.Results.Add(new()
-            {
-                Message = "Entity is null",
-                Severity = Severity.Error
-            });
-            return response;
+            return response.AddError("Entity is null");
         }
 
         await context.AddAsync(entity, token).ConfigureAwait(false);
@@ -27,48 +21,28 @@ public static class DbContextExtensions
         var changes = await context.SaveChangesAsync(token).ConfigureAwait(false);
         if (changes <= 0)
         {
-            response.Results.Add(new()
-            {
-                Message = "Error occurred during savechanges!",
-                Severity = Severity.Error
-            });
-            return response;
+            return response.AddError("Error occurred during savechanges!");
         }
 
-        response.Results.Add(new()
-        {
-            Message = "Entity is successfully created!",
-            Severity = Severity.Info
-        });
-
         response.Value = entity;
-        return response;
+        return response.AddInfo("Entity is successfully created!");
     }
 
-    public static async Task<Response<int>> UpdateEntityAsync<TKey, TEntity>(this DbContext context, TKey id, TEntity entity, CancellationToken token, params string[] propertiesToIgnore) where TEntity : EntityBase<TKey>
+    public static async Task<Response<int>> UpdateEntityAsync<TKey, TEntity>(this DbContext context, TKey id, TEntity entity, CancellationToken token, params string[] propertiesToIgnore)
+        where TEntity : EntityBase<TKey>
     {
         var response = new Response<int>();
         if (entity == null)
         {
-            response.Results.Add(new()
-            {
-                Message = "Entity is null",
-                Severity = Severity.Error
-            });
             response.Value = -1;
-            return response;
+            return response.AddError("Entity is null");
         }
 
         var dbEntity = await context.Set<TEntity>().FindAsync(new object[] { id }, cancellationToken: token).ConfigureAwait(false);
         if (dbEntity == null)
         {
-            response.Results.Add(new()
-            {
-                Message = "Entity not found",
-                Severity = Severity.Error
-            });
             response.Value = -1;
-            return response;
+            return response.AddError("Entity not found");
         }
 
         foreach (var property in entity.GetType().GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.GetProperty))
@@ -83,37 +57,22 @@ public static class DbContextExtensions
         var changes = await context.SaveChangesAsync(token).ConfigureAwait(false);
         if (changes <= 0)
         {
-            response.Results.Add(new()
-            {
-                Message = "An error occurred during savechanges!",
-                Severity = Severity.Error
-            });
-            return response;
+            return response.AddError("An error occurred during savechanges!");
         }
 
-        response.Results.Add(new()
-        {
-            Message = "Entity is successfully updated!",
-            Severity = Severity.Info
-        });
-
         response.Value = changes;
-        return response;
+        return response.AddInfo("Entity is successfully updated!");
     }
 
-    public static async Task<Response<int>> RemoveEntityAsync<TKey, TEntity>(this DbContext context, TKey id, CancellationToken token) where TEntity : EntityBase<TKey>
+    public static async Task<Response<int>> RemoveEntityAsync<TKey, TEntity>(this DbContext context, TKey id, CancellationToken token)
+        where TEntity : EntityBase<TKey>
     {
         var response = new Response<int>();
         var dbEntity = await context.Set<TEntity>().FindAsync(new object[] { id }, cancellationToken: token).ConfigureAwait(false);
         if (dbEntity == null)
         {
-            response.Results.Add(new()
-            {
-                Message = "Entity not found",
-                Severity = Severity.Error
-            });
             response.Value = -1;
-            return response;
+            return response.AddError("Entity not found");
         }
 
         dbEntity.IsActive = false;
@@ -121,27 +80,16 @@ public static class DbContextExtensions
         if (changes <= 0)
         {
             response.Value = changes;
-            response.Results.Add(new()
-            {
-                Message = "Error occurred during savechanges!",
-                Severity = Severity.Error
-            });
-            return response;
+            return response.AddError("Error occurred during savechanges!");
         }
 
-        response.Results.Add(new()
-        {
-            Message = "Successfully deleted",
-            Severity = Severity.Info
-        });
-
         response.Value = changes;
-        return response;
+        return response.AddInfo("Successfully deleted");
     }
 
-    public static async Task<Response<TEntity>> FindEntityAsync<TKey, TEntity>(this DbContext context, TKey id, CancellationToken token) where TEntity : EntityBase<TKey>
+    public static async Task<Response<TEntity>> FindEntityAsync<TKey, TEntity>(this DbContext context, TKey id, CancellationToken token)
+        where TEntity : EntityBase<TKey>
     {
-        var response = new Response<TEntity>();
         var dbEntity = await context.Set<TEntity>()
             .Where(x => x.Id.Equals(id))
             .IncludeUsersIfAuditEntity<TKey, TEntity>()
@@ -150,48 +98,38 @@ public static class DbContextExtensions
 
         if (dbEntity == null)
         {
-            response.Results.Add(new()
-            {
-                Message = "Entity not found",
-                Severity = Severity.Error
-            });
-            return response;
+            return Result.Error("Entity not found");
         }
 
-        response.Value = dbEntity;
-        return response;
+        return dbEntity;
     }
 
-    public static async Task<Response<IEnumerable<TEntity>>> WhereAsync<TKey, TEntity>(this DbContext context, Expression<Func<TEntity, bool>> predicate, CancellationToken token, params string[] includes) where TEntity : EntityBase<TKey>
+    public static async Task<Response<IEnumerable<TEntity>>> WhereAsync<TKey, TEntity>(this DbContext context, Expression<Func<TEntity, bool>> predicate, CancellationToken token, params string[] includes)
+        where TEntity : EntityBase<TKey>
     {
         var response = new Response<IEnumerable<TEntity>>();
         var query = context.Set<TEntity>()
             .Where(predicate)
             .IncludeUsersIfAuditEntity<TKey, TEntity>();
 
-        foreach (var item in includes ?? Array.Empty<string>())
+        foreach (var item in includes ?? [])
         {
             query = query.Include(item);
         }
 
-        var entities = await query.ToListAsync().ConfigureAwait(false);
-
+        var entities = await query.ToListAsync(token).ConfigureAwait(false);
         if (entities == null || entities.Count == 0)
         {
-            response.Value = Enumerable.Empty<TEntity>();
-            response.Results.Add(new()
-            {
-                Message = "Entity not found",
-                Severity = Severity.Info
-            });
-            return response;
+            response.Value = [];
+            return response.AddInfo("Entity not found");
         }
 
         response.Value = entities;
         return response;
     }
 
-    private static Predicate<TEntity> UserFilterPredicate<TKey, TEntity>(TEntity entity, string searchValue) where TEntity : AuditEntityBase<TKey>
+    private static Predicate<TEntity> UserFilterPredicate<TKey, TEntity>(TEntity entity, string searchValue)
+        where TEntity : AuditEntityBase<TKey>
     {
         Predicate<TEntity> creatorUserPredicate = (x) =>
         {
@@ -211,7 +149,8 @@ public static class DbContextExtensions
         return creatorUserPredicate;
     }
 
-    private static Predicate<TEntity> ActivePredicate<TKey, TEntity>() where TEntity : EntityBase<TKey>
+    private static Predicate<TEntity> ActivePredicate<TKey, TEntity>()
+        where TEntity : EntityBase<TKey>
     {
         Predicate<TEntity> isActivePredicate = (x) =>
         {
@@ -221,7 +160,8 @@ public static class DbContextExtensions
         return isActivePredicate;
     }
 
-    private static IQueryable<TEntity> IncludeUsersIfAuditEntity<TKey, TEntity>(this IQueryable<TEntity> queryable) where TEntity : EntityBase<TKey>
+    private static IQueryable<TEntity> IncludeUsersIfAuditEntity<TKey, TEntity>(this IQueryable<TEntity> queryable)
+        where TEntity : EntityBase<TKey>
     {
         if (typeof(TEntity).IsAssignableTo(typeof(IAuditEntityBase<TKey>)))
         {

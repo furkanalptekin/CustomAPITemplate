@@ -96,6 +96,8 @@
                         "CustomAPITemplate/CustomAPITemplate/Attributes/CacheAttribute.cs",
                         "CustomAPITemplate/CustomAPITemplate/Attributes/ClearCache.cs",
                         "CustomAPITemplate/CustomAPITemplate/ServiceInstallers/RedisInstaller.cs",
+                        "CustomAPITemplate/CustomAPITemplate/Services/IResponseCacheService.cs",
+                        "CustomAPITemplate/CustomAPITemplate/Services/ResponseCacheService.cs",
                         "CustomAPITemplate/CustomAPITemplate.Core/Configuration/RedisCacheSettings.cs"
                     ]
                 },
@@ -104,7 +106,8 @@
                     "exclude": [
                         "**/.dockerignore",
                         "**/docker-compose.*",
-                        "**/Dockerfile"
+                        "**/Dockerfile",
+                        "CustomAPITemplate/launchSettings.json"
                     ]
                 },
                 {

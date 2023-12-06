@@ -14,7 +14,7 @@ public class RedisInstaller : IServiceInstaller
 
         if (redisCacheSettings.IsEnabled)
         {
-            //services.AddStackExchangeRedisCache(opt => opt.Configuration = redisCacheSettings.ConnectionString);
+            //TODO: Secure connection string
             services.AddSingleton<IConnectionMultiplexer>(x => ConnectionMultiplexer.Connect(redisCacheSettings.ConnectionString));
             services.AddSingleton<IResponseCacheService, ResponseCacheService>();
         }

@@ -2,19 +2,15 @@
 using CustomAPITemplate.Contract.V1;
 using CustomAPITemplate.Core.Excel;
 using CustomAPITemplate.DB.Models;
-using CustomAPITemplate.DB.Repositories.Interfaces;
+using CustomAPITemplate.DB.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CustomAPITemplate.Controllers.V1;
 
-public class ExampleController : BasicV1Controller<int, Example, ExampleRequest, ExampleResponse, IExampleRepository>
+public class ExampleController(IExampleRepository _repository, IMapper _mapper)
+    : BasicV1Controller<int, Example, ExampleRequest, ExampleResponse, IExampleRepository>(_repository, _mapper)
 {
-    public ExampleController(IExampleRepository repository, IMapper mapper)
-        : base(repository, mapper)
-    {
-
-    }
 
     //TODO: Delete
     [HttpGet]
@@ -31,8 +27,8 @@ public class ExampleController : BasicV1Controller<int, Example, ExampleRequest,
         var excelSheetData = new ExcelSheetData
         {
             SheetName = "Example Report",
-            ColumnProperties = new()
-            {
+            ColumnProperties =
+            [
                 new() { PropertyName = nameof(Example.Id), HeaderName = "Id Header" },
                 new() { PropertyName = nameof(Example.Test1), HeaderName = "Test1 Header" },
                 new() { PropertyName = nameof(Example.Test2), HeaderName = "Test2 Header" },
@@ -40,15 +36,15 @@ public class ExampleController : BasicV1Controller<int, Example, ExampleRequest,
                 new() { PropertyName = nameof(Example.UpdateUserId), HeaderName = "UpdateUserId Header" },
                 new() { PropertyName = nameof(Example.CreatorUser), HeaderName = "CreatorUser Header" },
                 new() { PropertyName = nameof(Example.HostIP), HeaderName = "HostIP Header" },
-            },
+            ],
             Data = dataResponse.Value.Cast<object>().ToList()
         };
 
         var excelSheetData2 = new ExcelSheetData
         {
             SheetName = "Example Report 2",
-            ColumnProperties = new()
-            {
+            ColumnProperties =
+            [
                 new() { PropertyName = nameof(Example.Id), HeaderName = "Id Header" },
                 new() { PropertyName = nameof(Example.Test1), HeaderName = "Test1 Header" },
                 new() { PropertyName = nameof(Example.Test2), HeaderName = "Test2 Header" },
@@ -56,7 +52,7 @@ public class ExampleController : BasicV1Controller<int, Example, ExampleRequest,
                 new() { PropertyName = nameof(Example.UpdateTime), HeaderName = "UpdateTime Header", Format = "dd.mm.yyyy hh:mm" },
                 new() { PropertyName = "Value", HeaderName = "Value Header", Format = "#,##00" },
                 new() { PropertyName = "Value2", HeaderName = "Value2 Header" },
-            },
+            ],
             Data = dataResponse.Value.OrderByDescending(x => x.Id).Select(x =>
             {
                 var value = Random.Shared.NextDouble() + Random.Shared.Next();

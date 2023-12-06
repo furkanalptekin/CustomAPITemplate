@@ -1,9 +1,9 @@
 ﻿using AutoMapper;
 using CustomAPITemplate.Attributes;
 using CustomAPITemplate.Contract.V1;
+using CustomAPITemplate.Core;
 using CustomAPITemplate.DB.Entity;
-using CustomAPITemplate.DB.Repositories.Interfaces;
-using CustomAPITemplate.Extensions;
+using CustomAPITemplate.DB.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +17,7 @@ public class BasicApiController<TKey, TEntity, TEntityRequest, TEntityResponse, 
     : ControllerBase, IApiBase<TKey, TEntityRequest>
         where TEntity : IEntityBase<TKey>
         where TEntityRequest : IRequestBase
-        where TEntityResponse: IAuditResponseBase<TKey>
+        where TEntityResponse : IAuditResponseBase<TKey>
         where TRepository : IRepository<TKey, TEntity>
 {
 
@@ -36,7 +36,14 @@ public class BasicApiController<TKey, TEntity, TEntityRequest, TEntityResponse, 
 #endif
     public virtual async Task<IActionResult> Get(CancellationToken token)
     {
-        return await this.GetExtension<TKey, TEntity, TEntityResponse>(_repository, _mapper, token).ConfigureAwait(false);
+        var response = await _repository.GetAsync(token).ConfigureAwait(false);
+        if (!response.Success)
+        {
+            return NoContent();
+        }
+
+        var dtoResponse = _mapper.MapResponse<IEnumerable<TEntity>, IEnumerable<TEntityResponse>>(response);
+        return Ok(dtoResponse);
     }
 
     [HttpGet("{id}")]
@@ -45,7 +52,14 @@ public class BasicApiController<TKey, TEntity, TEntityRequest, TEntityResponse, 
 #endif
     public virtual async Task<IActionResult> Get(TKey id, CancellationToken token)
     {
-        return await this.GetExtension<TKey, TEntity, TEntityResponse>(id, _repository, _mapper, token).ConfigureAwait(false);
+        var response = await _repository.GetAsync(id, token).ConfigureAwait(false);
+        if (!response.Success)
+        {
+            return NoContent();
+        }
+
+        var dtoResponse = _mapper.MapResponse<TEntity, TEntityResponse>(response);
+        return Ok(dtoResponse);
     }
 
     [HttpPost]
@@ -53,10 +67,19 @@ public class BasicApiController<TKey, TEntity, TEntityRequest, TEntityResponse, 
     [ClearCache(typeof(CreatedAtActionResult))]
 #endif
     [Transaction]
-    [Sanitize]
     public virtual async Task<IActionResult> Post(TEntityRequest entity, CancellationToken token)
     {
-        return await this.PostExtension<TKey, TEntity, TEntityRequest, TEntityResponse>(_repository, entity, _mapper, token).ConfigureAwait(false);
+        var request = _mapper.Map<TEntity>(entity);
+        var response = await _repository.CreateAsync(request, token).ConfigureAwait(false);
+        if (!response.Success)
+        {
+            return BadRequest(response);
+        }
+
+        var id = response.Value.Id;
+        var dbEntityResponse = await _repository.GetAsync(response.Value.Id, token).ConfigureAwait(false);
+
+        return CreatedAtAction("Get", new { id }, _mapper.MapResponse<TEntity, TEntityResponse>(dbEntityResponse.Success ? dbEntityResponse : response));
     }
 
     [HttpDelete("{id}")]
@@ -66,7 +89,13 @@ public class BasicApiController<TKey, TEntity, TEntityRequest, TEntityResponse, 
     [Transaction]
     public virtual async Task<IActionResult> Delete(TKey id, CancellationToken token)
     {
-        return await this.DeleteExtension(_repository, id, token).ConfigureAwait(false);
+        var response = await _repository.DeleteAsync(id, token).ConfigureAwait(false);
+        if (!response.Success)
+        {
+            return BadRequest(response);
+        }
+
+        return NoContent();
     }
 
     [HttpPut("{id}")]
@@ -74,10 +103,17 @@ public class BasicApiController<TKey, TEntity, TEntityRequest, TEntityResponse, 
     [ClearCache(typeof(NoContentResult))]
 #endif
     [Transaction]
-    [Sanitize]
     public virtual async Task<IActionResult> Put(TKey id, TEntityRequest entity, CancellationToken token)
     {
-        return await this.PutExtension(_repository, id, entity, _mapper, null, token).ConfigureAwait(false);
+        var request = _mapper.Map<TEntity>(entity);
+        var response = await _repository.UpdateAsync(id, request, null, token);
+
+        if (!response.Success)
+        {
+            return BadRequest(response);
+        }
+
+        return NoContent();
     }
 
     [HttpPatch]

@@ -1,19 +1,13 @@
-﻿using CustomAPITemplate.Core.Configuration;
-using CustomAPITemplate.Core.Extensions;
+﻿using CustomAPITemplate.Core;
+using CustomAPITemplate.Core.Configuration;
 using CustomAPITemplate.Services;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace CustomAPITemplate.Attributes;
 
 [AttributeUsage(AttributeTargets.Method)]
-public class ClearCacheAttribute : Attribute, IAsyncActionFilter
+public class ClearCacheAttribute(Type _objectResult) : Attribute, IAsyncActionFilter
 {
-    private readonly Type _objectResult;
-    public ClearCacheAttribute(Type objectResult)
-    {
-        _objectResult = objectResult;
-    }
-
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var redisCacheSettings = context.HttpContext.RequestServices.GetRequiredService<RedisCacheSettings>();

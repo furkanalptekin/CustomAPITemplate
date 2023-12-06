@@ -2,11 +2,12 @@
 using CustomAPITemplate.Core;
 using CustomAPITemplate.DB.Entity;
 using CustomAPITemplate.DB.Extensions;
-using CustomAPITemplate.DB.Repositories.Interfaces;
 
 namespace CustomAPITemplate.DB.Repositories;
 
-public class Repository<TKey, TEntity> : IRepository<TKey, TEntity> where TEntity : EntityBase<TKey>
+//TODO: add pagination
+public class Repository<TKey, TEntity> : IRepository<TKey, TEntity>
+    where TEntity : EntityBase<TKey>
 {
     protected readonly AppDbContext _context;
     public Repository(AppDbContext context)

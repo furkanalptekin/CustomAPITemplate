@@ -1,16 +1,16 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
-namespace CustomAPITemplate.Core.Extensions;
+namespace CustomAPITemplate.Core;
 
 public static class JsonExtensions
 {
-    private static DefaultContractResolver _resolver = new()
+    private static readonly DefaultContractResolver _resolver = new()
     {
         NamingStrategy = new CamelCaseNamingStrategy()
     };
 
-    private static JsonSerializerSettings _settings = new()
+    private static readonly JsonSerializerSettings _settings = new()
     {
         ContractResolver = _resolver
     };

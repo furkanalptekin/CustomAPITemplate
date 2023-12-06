@@ -4,44 +4,27 @@ using System.Text;
 using CustomAPITemplate.Contract.V1;
 using CustomAPITemplate.Core;
 using CustomAPITemplate.Core.Configuration;
+using CustomAPITemplate.Core.Constants;
 using CustomAPITemplate.DB.Models;
 using CustomAPITemplate.DB.Repositories;
 using CustomAPITemplate.Helpers;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace CustomAPITemplate.Services;
 
-public class IdentityService : IIdentityService
+public class IdentityService(UserManager<AppUser> _userManager, JwtSettings _jwtSettings, IRefreshTokenRepository _repository)
+    : IIdentityService
 {
-    private readonly UserManager<AppUser> _userManager;
-    private readonly JwtSettings _jwtSettings;
-    private readonly AppDbContext _dbContext;
-
-    public IdentityService(UserManager<AppUser> userManager, JwtSettings jwtSettings, AppDbContext dbContext)
-    {
-        _userManager = userManager;
-        _jwtSettings = jwtSettings;
-        _dbContext = dbContext;
-    }
-
     public async Task<Response> RegisterAsync(RegistrationRequest request)
     {
-        var response = new Response();
-        var existingUser = await _userManager.FindByEmailAsync(request.Email);
-
+        var existingUser = await _userManager.FindByEmailAsync(request.Email).ConfigureAwait(false);
         if (existingUser != null)
         {
-            response.Results.Add(new Result
-            {
-                Message = "Email already exists!",
-                Severity = Severity.Error
-            });
-            return response;
+            return Result.Error("Email already exists!");
         }
 
-        var newUser = new AppUser
+        var user = new AppUser
         {
             FirstName = request.FirstName,
             LastName = request.LastName,
@@ -49,156 +32,181 @@ public class IdentityService : IIdentityService
             UserName = request.Email
         };
 
-        var createdUser = await _userManager.CreateAsync(newUser, request.Password);
-
-        if (!createdUser.Succeeded)
+        var createdUserResult = await _userManager.CreateAsync(user, request.Password);
+        if (!createdUserResult.Succeeded)
         {
-            response.Results.AddRange(createdUser.Errors.Select(x => new Result
-            {
-                Message = x.Description,
-                Severity = Severity.Error
-            }));
-            return response;
+            return createdUserResult.Errors
+                .Select(x => Result.Error(x.Description))
+                .ToList();
         }
 
-        response.Results.Add(new Result
+        var roleResult = await _userManager.AddToRoleAsync(user, Roles.USER);
+        if (!roleResult.Succeeded)
         {
-            Message = "Successfuly created the user!",
-            Severity = Severity.Info
-        });
+            return roleResult.Errors
+                .Select(x => Result.Error(x.Description))
+                .ToList();
+        }
 
-        return response;
+        return Result.Info("Successfuly created the user!");
     }
 
-    public async Task<Response<LoginResponse>> LoginAsync(LoginRequest request)
+    public async Task<Response<LoginResponse>> LoginAsync(LoginRequest request, CancellationToken token)
     {
-        var response = new Response<LoginResponse>();
-
-        var user = await _userManager.FindByEmailAsync(request.Email);
+        var user = await _userManager.FindByEmailAsync(request.Email).ConfigureAwait(false);
         if (user == null)
         {
-            response.Results.Add(new Result
-            {
-                Message = "User does not exists",
-                Severity = Severity.Error
-            });
-            return response;
+            return Result.Error("User does not exists");
         }
 
-        var userHasValidPass = await _userManager.CheckPasswordAsync(user, request.Password);
+        var userHasValidPass = await _userManager.CheckPasswordAsync(user, request.Password).ConfigureAwait(false);
         if (!userHasValidPass)
         {
-            response.Results.Add(new Result
-            {
-                Message = "Invalid password",
-                Severity = Severity.Error
-            });
-            return response;
+            return Result.Error("Invalid password");
         }
 
         if (user.IsBanned)
         {
-            response.Results.Add(new()
-            {
-                Message = "User is banned",
-                Severity = Severity.Error
-            });
-            return response;
+            return Result.Error("User is banned");
         }
 
-        response.Value = await GenerateAuthenticationResultAsync(user);
-
-        return response;
+        return await GenerateAuthenticationResultAsync(user, token).ConfigureAwait(false);
     }
 
-    public async Task<Response<LoginResponse>> RefreshTokenAsync(RefreshTokenRequest request)
+    public async Task<Response<LoginResponse>> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken token)
     {
-        var response = new Response<LoginResponse>();
         var principal = GetPrincipalFromToken(request.Token);
-
         if (principal == null)
         {
-            response.Results.Add(new()
-            {
-                Message = "Invalid token",
-                Severity = Severity.Error
-            });
-            return response;
+            return Result.Error("Invalid token");
         }
 
-        long.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Exp), out var expiryDateUnix);
+        _ = long.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Exp), out var expiryDateUnix);
         var expiryDateTimeUtc = DateTime.UnixEpoch.AddSeconds(expiryDateUnix);
 
         if (expiryDateTimeUtc > DateTime.UtcNow)
         {
-            response.Results.Add(new()
-            {
-                Message = "Invalid token",
-                Severity = Severity.Error
-            });
-            return response;
+            return Result.Error("Invalid token");
         }
 
         var jti = principal.FindFirstValue(JwtRegisteredClaimNames.Jti);
-        var storedRefreshToken = await _dbContext.RefreshToken.SingleOrDefaultAsync(x => x.Token == request.RefreshToken);
 
+        if (!Guid.TryParse(request.RefreshToken, out var refreshToken) || refreshToken == Guid.Empty)
+        {
+            return Result.Error("Invalid token");
+        }
+
+        var refreshTokenResponse = await _repository.GetAsync(refreshToken, token).ConfigureAwait(false);
+        if (!refreshTokenResponse.Success)
+        {
+            return refreshTokenResponse.Results;
+        }
+
+        var storedRefreshToken = refreshTokenResponse.Value;
         if (storedRefreshToken == null
             || DateTime.UtcNow > storedRefreshToken.ExpiryDate
-            || storedRefreshToken.Used
+            || !storedRefreshToken.IsActive
             || storedRefreshToken.Invalidated
             || storedRefreshToken.JwtId != jti)
         {
-            response.Results.Add(new()
-            {
-                Message = "Invalid token",
-                Severity = Severity.Error
-            });
-            return response;
+            return Result.Error("Invalid token");
         }
 
-        storedRefreshToken.Used = true;
-        _dbContext.RefreshToken.Update(storedRefreshToken);
-        await _dbContext.SaveChangesAsync();
+        var deleteResponse = await _repository.DeleteAsync(storedRefreshToken, token).ConfigureAwait(false);
+        if (!deleteResponse.Success)
+        {
+            return deleteResponse.Results;
+        }
 
-        var user = await _userManager.FindByIdAsync(principal.FindFirstValue("id"));
+        var user = await _userManager.FindByIdAsync(principal.FindFirstValue("id")).ConfigureAwait(false);
         if (user == null)
         {
-            response.Results.Add(new()
-            {
-                Message = "Invalid user",
-                Severity = Severity.Error
-            });
-            return response;
+            return Result.Error("Invalid user");
         }
 
         if (user.IsBanned)
         {
-            response.Results.Add(new()
-            {
-                Message = "User is banned",
-                Severity = Severity.Error
-            });
-            return response;
+            return Result.Error("User is banned");
         }
 
-        response.Value = await GenerateAuthenticationResultAsync(user);
-        return response;
+        return await GenerateAuthenticationResultAsync(user, token).ConfigureAwait(false);
     }
 
-    private async Task<LoginResponse> GenerateAuthenticationResultAsync(AppUser user)
+    public async Task<Response> BanUserAsync(Guid id, CancellationToken token)
+    {
+        var user = await _userManager.FindByIdAsync(id.ToString());
+        if (user == null)
+        {
+            return Result.Error("User does not exists");
+        }
+
+        user.IsBanned = true;
+
+        var updateResponse = await _userManager.UpdateAsync(user);
+        if (!updateResponse.Succeeded)
+        {
+            return updateResponse.Errors
+                .Select(x => Result.Error(x.Description))
+                .ToList();
+        }
+
+        await InvalidateRefreshTokensByUserId(id, token);
+
+        return Result.Info("User is banned successfully");
+    }
+
+    public async Task<Response> InvalidateRefreshTokensByUserId(Guid id, CancellationToken token)
+    {
+        return await _repository.InvalidateTokensByUserId(id, token).ConfigureAwait(false);
+    }
+
+    public async Task<Response> ChangeUserRole(UserRoleRequest request, CancellationToken token)
+    {
+        var existingUser = await _userManager.FindByIdAsync(request.UserId);
+        if (existingUser == null)
+        {
+            return Result.Error("User does not exists");
+        }
+
+        var currentRoles = await _userManager.GetRolesAsync(existingUser);
+        if (currentRoles.Count == 1 && currentRoles[0] == request.Role)
+        {
+            return Result.Error("Cannot change to same role");
+        }
+
+        var removeRolesResult = await _userManager.RemoveFromRolesAsync(existingUser, currentRoles ?? []);
+        if (!removeRolesResult.Succeeded)
+        {
+            return removeRolesResult.Errors
+                .Select(x => Result.Error(x.Description))
+                .ToList();
+        }
+
+        var addToRoleResult = await _userManager.AddToRoleAsync(existingUser, request.Role);
+        if (!addToRoleResult.Succeeded)
+        {
+            return addToRoleResult.Errors
+                .Select(x => Result.Error(x.Description))
+                .ToList();
+        }
+
+        return Result.Info("User role changed.");
+    }
+
+    private async Task<Response<LoginResponse>> GenerateAuthenticationResultAsync(AppUser user, CancellationToken ct)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_jwtSettings.Secret);
 
-        var claims = new List<Claim>
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim("id", user.Id.ToString())
-        };
+        List<Claim> claims =
+        [
+            new(JwtRegisteredClaimNames.Sub, user.Email),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new("id", user.Id.ToString())
+        ];
 
-        var userRoles = await _userManager.GetRolesAsync(user);
+        var userRoles = await _userManager.GetRolesAsync(user).ConfigureAwait(false);
         foreach (var role in userRoles ?? Enumerable.Empty<string>())
         {
             claims.Add(new(ClaimTypes.Role, role));
@@ -218,16 +226,19 @@ public class IdentityService : IIdentityService
             JwtId = token.Id,
             UserId = user.Id,
             CreationDate = DateTime.UtcNow,
-            ExpiryDate = DateTime.UtcNow.AddMonths(6),
+            ExpiryDate = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenLifetimeInDays),
         };
 
-        await _dbContext.RefreshToken.AddAsync(refreshToken);
-        await _dbContext.SaveChangesAsync();
+        var createResponse = await _repository.CreateAsync(refreshToken, ct).ConfigureAwait(false);
+        if (!createResponse.Success)
+        {
+            return createResponse.Results;
+        }
 
         return new LoginResponse
         {
             Token = tokenHandler.WriteToken(token),
-            RefreshToken = refreshToken.Token
+            RefreshToken = createResponse.Value.Id
         };
     }
 
@@ -252,45 +263,9 @@ public class IdentityService : IIdentityService
         }
     }
 
-    private bool IsJwtValidSecurityAlgorithm(SecurityToken securityToken)
+    private static bool IsJwtValidSecurityAlgorithm(SecurityToken securityToken)
     {
         return (securityToken is JwtSecurityToken jwtSecurityToken)
             && jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    public async Task<Response> BanUserAsync(Guid id)
-    {
-        var response = new Response();
-
-        var user = await _userManager.FindByIdAsync(id.ToString());
-        if (user == null)
-        {
-            response.Results.Add(new Result
-            {
-                Message = "User does not exists",
-                Severity = Severity.Error
-            });
-            return response;
-        }
-
-        user.IsBanned = true;
-
-        var updateResponse = await _userManager.UpdateAsync(user);
-        if (!updateResponse.Succeeded)
-        {
-            response.Results.AddRange(updateResponse.Errors.Select(x => new Result
-            {
-                Message = x.Description,
-                Severity = Severity.Error
-            }));
-            return response;
-        }
-
-        response.Results.Add(new()
-        {
-            Message = "User is banned successfully",
-            Severity = Severity.Info
-        });
-        return response;
     }
 }

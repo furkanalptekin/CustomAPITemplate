@@ -3,5 +3,5 @@
 public class RefreshTokenRequest : IRequestBase
 {
     public string Token { get; set; }
-    public Guid RefreshToken { get; set; }
+    public string RefreshToken { get; set; }
 }

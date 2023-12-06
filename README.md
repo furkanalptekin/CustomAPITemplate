@@ -1,6 +1,6 @@
 ## Custom API Template
 
-A .Net 7 Web Api project template featuring;
+A .Net 8 Web Api project template featuring;
 - PostgreSQL or SqlServer for database
 - Redis for caching
 - ElasticSearch, Kibana and Serilog for logging and visualization

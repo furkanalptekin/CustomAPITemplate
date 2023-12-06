@@ -2,7 +2,7 @@
 
 public class FileHelper
 {
-    public string WwwRootPath { get; set; }
-    public string FolderName { get; set; }
-    public string[] AllowedFileExtensions { get; set; }
+    public required string WwwRootPath { get; init; }
+    public required string FolderName { get; init; }
+    public required string[] AllowedFileExtensions { get; init; }
 }

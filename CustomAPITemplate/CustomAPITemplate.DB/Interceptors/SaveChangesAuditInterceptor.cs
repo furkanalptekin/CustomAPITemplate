@@ -4,15 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace CustomAPITemplate.DB.Interceptors;
-public class SaveChangesAuditInterceptor : SaveChangesInterceptor
-{
-    private static readonly Type _auditEntityBaseType = typeof(IAuditEntityBase);
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    public SaveChangesAuditInterceptor(IHttpContextAccessor httpContextAccessor)
-    {
-        _httpContextAccessor = httpContextAccessor;
-    }
+public class SaveChangesAuditInterceptor(IHttpContextAccessor _httpContextAccessor) : SaveChangesInterceptor
+{
+    private static readonly Type s_entityBaseType = typeof(IEntityBase);
 
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
@@ -26,16 +21,25 @@ public class SaveChangesAuditInterceptor : SaveChangesInterceptor
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
-    //TODO: return error on invalid user
     private void InjectAuditData(DbContextEventData eventData)
     {
         var entries = eventData.Context.ChangeTracker
             .Entries()
-            .Where(x => x.State is EntityState.Modified or EntityState.Added && x.Entity != null && x.Entity.GetType().IsAssignableTo(_auditEntityBaseType));
+            .Where(x => x.State is EntityState.Modified or EntityState.Added && x.Entity != null && x.Entity.GetType().IsAssignableTo(s_entityBaseType));
 
         foreach (var entry in entries)
         {
-            var auditEntity = (IAuditEntityBase)entry.Entity;
+            var entryEntityBase = (IEntityBase)entry.Entity;
+            if (entry.State == EntityState.Added)
+            {
+                entryEntityBase.IsActive = true;
+            }
+
+            if (entry.Entity is not IAuditEntityBase auditEntityBase)
+            {
+                continue;
+            }
+
             var userIdString = GetUserId();
             var ipAddress = _httpContextAccessor.HttpContext.Connection.RemoteIpAddress?.ToString();
 
@@ -43,16 +47,15 @@ public class SaveChangesAuditInterceptor : SaveChangesInterceptor
 
             if (entry.State == EntityState.Added)
             {
-                auditEntity.CreationTime = DateTime.UtcNow;
-                auditEntity.CreatorUserId = userId;
-                auditEntity.HostIP = ipAddress;
-                auditEntity.IsActive = true;
+                auditEntityBase.CreationTime = DateTime.UtcNow;
+                auditEntityBase.CreatorUserId = userId;
+                auditEntityBase.HostIP = ipAddress;
                 continue;
             }
 
-            auditEntity.UpdateTime = DateTime.UtcNow;
-            auditEntity.UpdateHostIP = ipAddress;
-            auditEntity.UpdateUserId = userId;
+            auditEntityBase.UpdateTime = DateTime.UtcNow;
+            auditEntityBase.UpdateHostIP = ipAddress;
+            auditEntityBase.UpdateUserId = userId;
         }
     }
 

@@ -4,7 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace CustomAPITemplate.Helpers;
 
-public class TokenValidationParametersHelper
+public static class TokenValidationParametersHelper
 {
     public static TokenValidationParameters GetTokenValidationParameters(JwtSettings jwtSettings, bool validateLifetime = true)
     {
